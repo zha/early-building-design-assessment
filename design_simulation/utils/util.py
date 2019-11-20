@@ -1,6 +1,6 @@
 import numpy as np
 import itertools 
-from gen_dome import gen_dome
+from .gen_dome import gen_dome
 from ladybug_geometry.geometry3d.pointvector import Point3D, Vector3D
 from ladybug_geometry.geometry3d.ray import Ray3D
 import functools
