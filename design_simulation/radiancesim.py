@@ -1,0 +1,2 @@
+class RadianceSim(object):
+    pass
