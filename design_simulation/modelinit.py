@@ -10,12 +10,13 @@ from ladybug_geometry.geometry3d.face import Face3D
 import itertools
 
 import numpy as np
-
+# TODO: for update method, add assert to make sure that all the inputs are in
 class ModelInit(object):
     __slots__ = ('_zone_name','_orientation', '_zone_width', '_zone_depth', '_zone_height',
                  '_U_factor', '_SHGC' , '_WWR', '_wea_dir', '_stand','_room', '_viewfactor',
-                 '_testPts','__faceidbyori', '_room', '__testptsheight',
-                 '_working_dir', '_observers','__xupper', '__yupper')
+                 '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
+                 '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
+                 '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
                  zone_height = None,  U_factor = None, SHGC = None, WWR = None,
@@ -31,8 +32,9 @@ class ModelInit(object):
         self.stand = stand
         self.wea_dir = wea_dir
         self.working_dir = working_dir
-        self.__faceidbyori = {'north':1, 'south': 3, 'east': 2, 'west': 4}
         self._observers = None
+        self.__faceid = {0: "floor", 1: "north", 2: "east", 3: "south", 4: "west", 5: "ceiling"}
+        self.__faceid_reversed = {v: k for k, v in self.__faceid.items()}
 
     @property
     def zone_name(self):
@@ -166,12 +168,31 @@ class ModelInit(object):
 
 
     @property
-    def opaque_faces_geometry(self):
+    def opaque_faces_geometry(self):  # this is useful for viewfactor calculation
         return [self.room.faces[i].punched_geometry for i in range(6)]
 
     @property
-    def glazing_faces_geometry(self):
-        return [item.geometry for item in self.room.faces[self.__faceidbyori[self.orientation]].apertures]
+    def glazing_faces_geometry(self):  # this is useful for energyplus simulation
+        return [item.geometry for item in self.room.faces[self.__faceid_reversed[self.orientation]].apertures]
+
+    @property # this is useful for energyplus simulation
+    def interior_wall_faces(self):
+       return self._interior_wall_faces
+
+    @property
+    def exterior_wall_face(self): # this is useful for energyplus simulation
+        return self._exterior_wall_face
+    @property
+    def floor_face(self): # this is useful for energyplus simulation
+        return self._floor_face
+    @property
+    def ceiling_face(self): # this is useful for energyplus simulation
+        return self._ceiling_face
+
+    @property
+    def apertures(self): # this is useful for energyplus simulation
+        return self.exterior_wall_face.apertures
+
 
     @property
     def viewfactor(self):
@@ -181,81 +202,78 @@ class ModelInit(object):
     def testPts(self):
         return self._testPts
 
-    @staticmethod
-    def __genRoom(zonename, width , depth , height , WWR , ori ,numGlz = 2,):
-        if ori == 'south' or ori == 'north':
-            w = width
-            d = depth
-        elif ori == 'east' or ori == 'west':
-            w = depth
-            d = width
-        else:
-            raise ("Orientation is not understandable")
 
-        room = Room.from_box(zonename, w, d, height, 0,
+    def __genRoom(self,numGlz = 2,):
+
+        self._room = Room.from_box(self.zone_name, self.__xupper, self.__yupper, self.zone_height, 0,
                              Point3D(0, 0, 0))  # name, width, depth, height, , orientation_angle, origin
-        assert list(room.faces[0].normal) == [0.0, 0.0, -1.0]
-        assert list(room.faces[1].normal) == [0.0, 1.0, 0.0]
-        assert list(room.faces[2].normal) == [1.0, 0.0, 0.0]
-        assert list(room.faces[3].normal) == [0.0, -1.0, 0.0]
-        assert list(room.faces[4].normal) == [-1.0, 0.0, 0.0]
-        assert list(room.faces[5].normal) == [0.0, 0.0, 1.0]
+        assert list(self._room.faces[0].normal) == [0.0, 0.0, -1.0]
+        assert list(self._room.faces[1].normal) == [0.0, 1.0, 0.0]
+        assert list(self._room.faces[2].normal) == [1.0, 0.0, 0.0]
+        assert list(self._room.faces[3].normal) == [0.0, -1.0, 0.0]
+        assert list(self._room.faces[4].normal) == [-1.0, 0.0, 0.0]
+        assert list(self._room.faces[5].normal) == [0.0, 0.0, 1.0]
 
-        assert 'Bottom' in room.faces[0].name
-        assert 'Front' in room.faces[1].name
-        assert 'Right' in room.faces[2].name
-        assert 'Back' in room.faces[3].name
-        assert 'Left' in room.faces[4].name
-        assert 'Top' in room.faces[5].name
+        assert 'Bottom' in self._room.faces[0].name
+        assert 'Front' in self._room.faces[1].name
+        assert 'Right' in self._room.faces[2].name
+        assert 'Back' in self._room.faces[3].name
+        assert 'Left' in self._room.faces[4].name
+        assert 'Top' in self._room.faces[5].name
 
         # Change the name to something more understandable
-        inddict = {0: "floor", 1: "north", 2: "east", 3: "south", 4: "west", 5: "ceiling"}
 
-        for i, face in enumerate(room.faces):
-            if inddict[i] == ori:
-                face.name = inddict[i] + "_" + 'exterior'
-                exterior_id = i
+        self._interior_wall_faces = []
+        for i, face in enumerate(self._room.faces):
+            if self.__faceid[i] == self.orientation:
+                face.name = self.__faceid[i] + "_" + 'exterior'
+                self._exterior_wall_face = face
             else:
-                face.name = inddict[i] + "_" + 'interior'
+                face.name = self.__faceid[i] + "_" + 'interior'
+                if self.__faceid[i] == 'floor':
+                    self._floor_face = face
+                elif self.__faceid[i] == 'ceiling':
+                    self._ceiling_face = face
+                else:
+                    self._interior_wall_faces.append(face)
 
         glz_id = {'north': 1, 'south': 3, 'east': 2, 'west': 4}
 
         def addGlz(hor_lower, hor_upper, ver_lower, ver_upper, glz_i):
-            if ori == 'north':
-                glz_pts = (Point3D(hor_lower, depth, ver_lower), Point3D(hor_lower, depth, ver_upper),
-                           Point3D(hor_upper, depth, ver_upper), Point3D(hor_upper, depth, ver_lower))
+            if self.orientation == 'north':
+                glz_pts = (Point3D(hor_lower, self.zone_depth, ver_lower), Point3D(hor_lower, self.zone_depth, ver_upper),
+                           Point3D(hor_upper, self.zone_depth, ver_upper), Point3D(hor_upper, self.zone_depth, ver_lower))
                 glz_face = Face3D(glz_pts)  ## Init without face
                 glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
 
-            elif ori == 'south':
+            elif self.orientation == 'south':
                 glz_pts = (Point3D(hor_lower, 0, ver_lower), Point3D(hor_lower, 0, ver_upper),
                            Point3D(hor_upper, 0, ver_upper), Point3D(hor_upper, 0, ver_lower))
                 glz_face = Face3D(glz_pts)  ## Init without face
                 glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
 
-            elif ori == 'east':
-                glz_pts = (Point3D(depth, hor_lower, ver_lower), Point3D(depth, hor_lower, ver_upper),
-                           Point3D(depth, hor_upper, ver_upper), Point3D(depth, hor_upper, ver_lower))
+            elif self.orientation == 'east':
+                glz_pts = (Point3D(self.zone_depth, hor_lower, ver_lower), Point3D(self.zone_depth, hor_lower, ver_upper),
+                           Point3D(self.zone_depth, hor_upper, ver_upper), Point3D(self.zone_depth, hor_upper, ver_lower))
                 glz_face = Face3D(glz_pts)  ## Init without face
                 glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
 
-            elif ori == 'west':
+            elif self.orientation == 'west':
                 glz_pts = (Point3D(0, hor_lower, ver_lower), Point3D(0, hor_lower, ver_upper),
                            Point3D(0, hor_upper, ver_upper), Point3D(0, hor_upper, ver_lower))
                 glz_face = Face3D(glz_pts)  ## Init without face
                 glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
 
-            room.faces[glz_id[ori]].add_aperture(glz_ape)
+            self._room.faces[glz_id[self.orientation]].add_aperture(glz_ape)
 
         for glz_i in range(numGlz):
-            hor_lower = glz_i * width / numGlz + width / numGlz / 2 - (width / numGlz) * np.sqrt(WWR / 100) / 2
-            hor_upper = glz_i * width / numGlz + width / numGlz / 2 + (width / numGlz) * np.sqrt(WWR / 100) / 2
-            ver_lower = height / 2 - height * np.sqrt(WWR / 100) / 2
-            ver_upper = height / 2 + height * np.sqrt(WWR / 100) / 2
+            hor_lower = glz_i * self.zone_width / numGlz + self.zone_width / numGlz / 2 - (self.zone_width / numGlz) * np.sqrt(self.WWR / 100) / 2
+            hor_upper = glz_i * self.zone_width / numGlz + self.zone_width / numGlz / 2 + (self.zone_width / numGlz) * np.sqrt(self.WWR / 100) / 2
+            ver_lower = self.zone_height / 2 - self.zone_height * np.sqrt(self.WWR / 100) / 2
+            ver_upper = self.zone_height / 2 + self.zone_height * np.sqrt(self.WWR / 100) / 2
 
-            assert (0 < hor_lower < hor_upper < width or 0 < ver_lower < ver_upper < height), "check WWR"
+            assert (0 < hor_lower < hor_upper < self.zone_width or 0 < ver_lower < ver_upper < self.zone_height), "check WWR"
             addGlz(hor_lower, hor_upper, ver_lower, ver_upper, glz_i)
-        return room
 
     def update(self):
         assert self._observers is not None, 'No observer attached'
@@ -266,8 +284,7 @@ class ModelInit(object):
 
         if regen_ep:
             logging.info("(Re)calculate ep")
-            self._room = self.__genRoom(self.zone_name, self.zone_width, self.zone_depth, self.zone_height,
-                                        self.WWR, self.orientation)
+            self.__genRoom()
         else:
             logging.info("No need to update room object")
 
