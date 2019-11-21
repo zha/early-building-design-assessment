@@ -6,10 +6,11 @@ from honeybeeradiance.radiance.sky.skymatrix import SkyMatrix
 from honeybeeradiance.radiance.recipe.annual.gridbased import GridBased
 
 import os
+import logging
 
 from .radiancewrite import write
 class RadianceModel(object):
-    __slots__ = ('_room_rad', '_model', '_result')
+    __slots__ = ('_room_rad', '_model', '_result', '_rp')
 
     def __init__(self, model):
         self.model = model
@@ -39,24 +40,35 @@ class RadianceModel(object):
 
     @property
     def rp(self):
-        sky = SkyMatrix(self.model.weather, hoys=self.model.sun_up_hoys)
+        try: return self._rp
+        except:
+            sky = SkyMatrix(self.model.weather, hoys=self.model.sun_up_hoys)
 
-        flat_testPts = np.array(self.model.testPts).reshape(-1, 3)
-        analysis_grid = AnalysisGrid.from_points_and_vectors(flat_testPts)
-        rp = GridBased(sky_mtx=sky, analysis_grids=(analysis_grid,), simulation_type=1,
-                       hb_objects=(self.room,), reuse_daylight_mtx=False)  # ,radiance_parameters =  RfluxmtxParameters(0))
+            flat_testPts = np.array(self.model.testPts).reshape(-1, 3)
+            analysis_grid = AnalysisGrid.from_points_and_vectors(flat_testPts)
+            self._rp = GridBased(sky_mtx=sky, analysis_grids=(analysis_grid,), simulation_type=1,
+                           hb_objects=(self.room,), reuse_daylight_mtx=False)  # ,radiance_parameters =  RfluxmtxParameters(0))
 
-        return rp
+            return self._rp
 
 
 
     @property
     def result(self):
-        batch_file = write(self.rp, target_folder=self.model.working_dir, project_name=self.model.zone_name)
+        try: return self._result
+        except:
+            logging.info("No pre-exisitng results found, now running Radaince")
+            batch_file = write(self.rp, target_folder=self.model.working_dir, project_name=self.model.zone_name)
+            logging.info("Radiance batch file is located in {}".format(batch_file))
+            logging.info('Now running Radiance')
+            self.rp.run(batch_file, debug=False)
+            logging.info('Radiance is now completed')
+            self._result = RadianceResult(os.path.join(self.model.working_dir, self.model.zone_name, 'gridbased_annual'))
+            return self._result
 
 
 
 
 class RadianceResult:
-    def __init__(self):
+    def __init__(self, result_path):
         pass
