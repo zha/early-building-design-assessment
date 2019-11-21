@@ -5,8 +5,16 @@ from ladybug_geometry.geometry3d.pointvector import Point3D, Vector3D
 from ladybug_geometry.geometry3d.ray import Ray3D
 import functools
 from honeybee.aperture import Aperture
-from honeybee.room import Room
+from honeybee.room import Room as Room_energy
 from ladybug_geometry.geometry3d.face import Face3D
+from honeybeeradiance.hbfensurface import HBFenSurface
+from honeybeeradiance.vectormath.euclid import Vector3, Point3
+from honeybeeradiance.radiance.material.glass import Glass
+from honeybeeradiance.room import Room as Room_rad
+
+
+
+
 import itertools
 
 import numpy as np
@@ -16,6 +24,7 @@ class ModelInit(object):
                  '_U_factor', '_SHGC' , '_WWR', '_wea_dir', '_stand','_room', '_viewfactor',
                  '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
+                 '__faceid_rad_reversed', '__faceid_rad','_room_rad',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -35,7 +44,8 @@ class ModelInit(object):
         self._observers = None
         self.__faceid = {0: "floor", 1: "north", 2: "east", 3: "south", 4: "west", 5: "ceiling"}
         self.__faceid_reversed = {v: k for k, v in self.__faceid.items()}
-
+        self.__faceid_rad = {0: "south", 1: "east", 2:"north", 3:"west"}  # TODO: ADD ASSERT TO CHECK RADAINCE
+        self.__faceid_rad_reversed = {v: k for k, v in self.__faceid_rad.items()}
     @property
     def zone_name(self):
         """Get or set a boolean for whether the zone sizing calculation is run."""
@@ -205,8 +215,13 @@ class ModelInit(object):
 
     def __genRoom(self,numGlz = 2,):
 
-        self._room = Room.from_box(self.zone_name, self.__xupper, self.__yupper, self.zone_height, 0,
+        self._room = Room_energy.from_box(self.zone_name, self.__xupper, self.__yupper, self.zone_height, 0,
                              Point3D(0, 0, 0))  # name, width, depth, height, , orientation_angle, origin
+
+        self._room_rad = Room_rad(origin=(0, 0, 0), width=self.__xupper , depth=self.__yupper, height=self.zone_height,
+                                    rotation_angle = 0)
+
+
         assert list(self._room.faces[0].normal) == [0.0, 0.0, -1.0]
         assert list(self._room.faces[1].normal) == [0.0, 1.0, 0.0]
         assert list(self._room.faces[2].normal) == [1.0, 0.0, 0.0]
@@ -241,30 +256,47 @@ class ModelInit(object):
 
         def addGlz(hor_lower, hor_upper, ver_lower, ver_upper, glz_i):
             if self.orientation == 'north':
+                ## EnergyPlus
                 glz_pts = (Point3D(hor_lower, self.zone_depth, ver_lower), Point3D(hor_lower, self.zone_depth, ver_upper),
                            Point3D(hor_upper, self.zone_depth, ver_upper), Point3D(hor_upper, self.zone_depth, ver_lower))
-                glz_face = Face3D(glz_pts)  ## Init without face
-                glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
+                ## Radiance
+                glz_pts_rad = (Point3(hor_lower, self.zone_depth, ver_lower), Point3(hor_lower, self.zone_depth, ver_upper),
+                               Point3(hor_upper, self.zone_depth, ver_upper), Point3(hor_upper, self.zone_depth, ver_lower))
 
             elif self.orientation == 'south':
+                ## EnergyPlus
                 glz_pts = (Point3D(hor_lower, 0, ver_lower), Point3D(hor_lower, 0, ver_upper),
                            Point3D(hor_upper, 0, ver_upper), Point3D(hor_upper, 0, ver_lower))
-                glz_face = Face3D(glz_pts)  ## Init without face
-                glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
+                ## Radiance
+                glz_pts_rad = (Point3(hor_lower, 0, ver_lower), Point3(hor_lower, 0, ver_upper),
+                               Point3(hor_upper, 0, ver_upper), Point3(hor_upper, 0, ver_lower))
+
 
             elif self.orientation == 'east':
+                ## EnergyPlus
                 glz_pts = (Point3D(self.zone_depth, hor_lower, ver_lower), Point3D(self.zone_depth, hor_lower, ver_upper),
                            Point3D(self.zone_depth, hor_upper, ver_upper), Point3D(self.zone_depth, hor_upper, ver_lower))
-                glz_face = Face3D(glz_pts)  ## Init without face
-                glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
+                ## Radiance
+                glz_pts_rad = (Point3(self.zone_depth, hor_lower, ver_lower), Point3(self.zone_depth, hor_lower, ver_upper),
+                               Point3(self.zone_depth, hor_upper, ver_upper), Point3(self.zone_depth, hor_upper, ver_lower))
 
             elif self.orientation == 'west':
+                ## EnergyPlus
                 glz_pts = (Point3D(0, hor_lower, ver_lower), Point3D(0, hor_lower, ver_upper),
                            Point3D(0, hor_upper, ver_upper), Point3D(0, hor_upper, ver_lower))
-                glz_face = Face3D(glz_pts)  ## Init without face
-                glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
-
+                ## Radiance
+                glz_pts_rad = (Point3(0, hor_lower, ver_lower), Point3(0, hor_lower, ver_upper),
+                               Point3(0, hor_upper, ver_upper), Point3(0, hor_upper, ver_lower))
+            ## EnergyPlus
+            glz_face = Face3D(glz_pts)  ## Init without face
+            glz_ape = Aperture('glz_{}'.format(glz_i), glz_face)
             self._room.faces[glz_id[self.orientation]].add_aperture(glz_ape)
+            ## Radiance
+            glz_face_rad = HBFenSurface('glz_{}'.format(glz_i), glz_pts_rad)
+            # glass_mat_rad = Glass.by_single_trans_value('Tvis_{}'.format(glz_i), self.SHGC)  # TODO: NEED TO CHECK THIS ASSUMPTION
+            # glz_face_rad.radiance_material = glass_mat_rad
+            self._room_rad.walls[self.__faceid_rad_reversed[self.orientation]].add_fenestration_surface(glz_face_rad)
+
 
         for glz_i in range(numGlz):
             hor_lower = glz_i * self.zone_width / numGlz + self.zone_width / numGlz / 2 - (self.zone_width / numGlz) * np.sqrt(self.WWR / 100) / 2
@@ -328,7 +360,7 @@ class ModelInit(object):
 
         VFs = [[calcVF_ind(faces, testpt_ind) for testpt_ind in first_list] for first_list in testPts]
         assert not (np.array(VFs).sum(axis=2) > 1.01).any()  # Raise flag if any of them is larger than 1.01
-        assert not (np.array(VFs).sum(axis=2) < 0.99).any()  # Raise flag if any of them is less than 0.99
+        assert not (np.array(VFs).sum(axis=2) < 0.99).any(), np.array(VFs).sum(axis=2)  # Raise flag if any of them is less than 0.99
 
         # VFs.append(vfunc(testPts, face))
 
