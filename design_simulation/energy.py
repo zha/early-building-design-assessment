@@ -160,13 +160,12 @@ class EnergyModel:
             1;                       !- Generic Contaminant Capacity Multiplier""".format(self.model.zone_name)
         idf_str = '\n\n'.join((sim_par_str, '\n\n'.join(ddy_strs), model_str,
                                add_str))  # add_str   #https://github.com/ladybug-tools/honeybee-energy/blob/master/honeybee_energy/writer.py
-        write_to_file_by_name(os.path.join(self.model.working_dir, self.model.zone_name), 'in.idf', idf_str, True)
 
         return idf_str
 
     @property
     def result(self):
-        self.idf
+        write_to_file_by_name(os.path.join(self.model.working_dir, self.model.zone_name), 'in.idf', self.idf, True)
         run_idf(os.path.join(self.model.working_dir, self.model.zone_name, 'in.idf'), self.model.wea_dir, r"C:\EnergyPlusV9-0-1")
 
         self._result = EnergyResult()

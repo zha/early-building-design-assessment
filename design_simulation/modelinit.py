@@ -11,6 +11,8 @@ from honeybeeradiance.hbfensurface import HBFenSurface
 from honeybeeradiance.vectormath.euclid import Vector3, Point3
 from honeybeeradiance.radiance.material.glass import Glass
 from honeybeeradiance.room import Room as Room_rad
+from ladybug.wea import Wea
+from ladybug.sunpath import Sunpath
 
 
 
@@ -24,7 +26,7 @@ class ModelInit(object):
                  '_U_factor', '_SHGC' , '_WWR', '_wea_dir', '_stand','_room', '_viewfactor',
                  '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
-                 '__faceid_rad_reversed', '__faceid_rad','_room_rad',
+                 '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -41,7 +43,9 @@ class ModelInit(object):
         self.stand = stand
         self.wea_dir = wea_dir
         self.working_dir = working_dir
+        self._weather = None
         self._observers = None
+        self._sun_up_hoys = None
         self.__faceid = {0: "floor", 1: "north", 2: "east", 3: "south", 4: "west", 5: "ceiling"}
         self.__faceid_reversed = {v: k for k, v in self.__faceid.items()}
         self.__faceid_rad = {0: "south", 1: "east", 2:"north", 3:"west"}  # TODO: ADD ASSERT TO CHECK RADAINCE
@@ -176,6 +180,9 @@ class ModelInit(object):
         #                    self._WWR , self._orientation)
         # return self._room
 
+    @property
+    def room_rad(self):
+        return self._room_rad
 
     @property
     def opaque_faces_geometry(self):  # this is useful for viewfactor calculation
@@ -211,6 +218,28 @@ class ModelInit(object):
     @property
     def testPts(self):
         return self._testPts
+
+
+    @property
+    def weather(self):
+        if self._weather is None:
+            self._weather = Wea.from_epw_file(self.wea_dir)
+        return self._weather
+    @property
+    def location(self):
+        return self.weather.location
+    @property
+    def sunpath(self):
+        return Sunpath.from_location(self.location)
+    @property
+    def sun_up_hoys(self):
+        if self._sun_up_hoys is None:
+            suns = tuple(self.sunpath.calculate_sun_from_hoy(hoy) for hoy in range(8760))
+            self._sun_up_hoys = tuple(s.hoy for s in suns if s.altitude > 0)
+
+        return self._sun_up_hoys
+
+
 
 
     def __genRoom(self,numGlz = 2,):
