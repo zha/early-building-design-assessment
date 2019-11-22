@@ -63,12 +63,27 @@ class RadianceModel(object):
             logging.info('Now running Radiance')
             self.rp.run(batch_file, debug=False)
             logging.info('Radiance is now completed')
-            self._result = RadianceResult(os.path.join(self.model.working_dir, self.model.zone_name, 'gridbased_annual'))
+            self._result = RadianceResult(self.model.working_dir, self.rp)
             return self._result
 
 
 
 
 class RadianceResult:
-    def __init__(self, result_path):
-        pass
+    __slots__ = ('_rp', '_work_dir', '_scene_daylit')
+    def __init__(self, work_dir, rp):
+        self._work_dir = work_dir
+        self._rp = rp
+
+    @property
+    def scene_daylit(self):
+        try: return self._scene_daylit
+        except:
+            with open(os.path.join(self._work_dir, self._rp._skyfiles.sky_mtx_total), 'rb') as f:
+                sky_mtx_total = f.readlines()
+            with open(self._rp.result_files[0], 'rb') as f:
+                dc_ttoal = f.readlines()
+
+            self._scene_daylit = 0
+        return 0
+

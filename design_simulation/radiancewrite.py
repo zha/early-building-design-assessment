@@ -77,7 +77,7 @@ def write(obj, target_folder, project_name='untitled', header=True,
     # # 2.2. Create sun matrix
     skycommands, skyfiles = get_commands_sky_simplified(project_folder, obj.sky_matrix,
                                                         reuse=True)
-
+    obj._skyfiles = skyfiles
     obj._commands.extend(skycommands)
 
     # for each window group - calculate total, direct and direct-analemma results
@@ -302,6 +302,9 @@ def _get_commands_daylight_coeff(
             ':: end of calculation for {}, {}'.format(window_group.name, state.name))
         commands.append('::')
         commands.append('::')
+        result_files.append(os.path.join(project_folder, d_matrix))
+        result_files.append(os.path.join(project_folder, d_matrix_direct))
+        result_files.append(os.path.join(project_folder, sun_matrix))
 
     #         if not simplified:
     #             result_files.append(
@@ -312,7 +315,7 @@ def _get_commands_daylight_coeff(
     #                 os.path.join(project_folder, str(finalmtx.output_file))
     #             )
 
-    return commands, []
+    return commands, result_files
 
 
 def get_commands_sky_simplified(project_folder, sky_matrix, reuse=True):
