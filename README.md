@@ -1,9 +1,15 @@
 # A simulation tool for early building design assessment
 A simulation workflow built for my Master's thesis at UofT
 ##  Installation:
-```python
+```
 pip install git+https://github.com/zha/early-building-design-assessment.git
 ```
+May also need to install forked honeybee/ladybug repos:
+```
+pip install git+https://github.com/zha/honeybee-energy.git
+pip install git+https://github.com/zha/honeybee.git
+```
+
 ## Dev Status
 - [x] Geometry
 - [x] EnergyPlus
