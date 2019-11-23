@@ -7,8 +7,15 @@ from honeybeeradiance.radiance.recipe.annual.gridbased import GridBased
 
 import os
 import logging
+from pathlib import Path
+
 
 from .radiancewrite import write
+from multiprocessing import Pool
+
+from multiprocessing import Process,freeze_support
+import multiprocessing
+
 class RadianceModel(object):
     __slots__ = ('_room_rad', '_model', '_result', '_rp')
 
@@ -58,32 +65,221 @@ class RadianceModel(object):
         try: return self._result
         except:
             logging.info("No pre-exisitng results found, now running Radaince")
-            batch_file = write(self.rp, target_folder=self.model.working_dir, project_name=self.model.zone_name)
+            batch_file, project_folder = write(self.rp, target_folder=self.model.working_dir, project_name=self.model.zone_name)
             logging.info("Radiance batch file is located in {}".format(batch_file))
             logging.info('Now running Radiance')
             self.rp.run(batch_file, debug=False)
             logging.info('Radiance is now completed')
-            self._result = RadianceResult(self.model.working_dir, self.rp)
+            self._result = RadianceResult(project_folder, self.rp)
             return self._result
+import os
+def matmul(mat1, mat2):
+    print(os.getpid())
+    return np.matmul(mat1, mat2).tolist()
+
+def matop(mtx_dir, dc_dir, mode, return_val):
+
+
+    if mode ==1 or mode ==2:
+        with open(mtx_dir, 'r') as f:
+            sky_mtx = f.readlines()
+
+            # read in dc file
+        with open(dc_dir, 'r') as f:
+            dc = f.readlines()
+
+
+        dc_str = ' '.join(dc[11:]).replace("\t", " ").replace("\n", " ")
+        sky_mtx_str = ' '.join(sky_mtx[8:]).replace("\t", " ").replace("\n", " ")
+        dc_parsed = np.fromstring(dc_str, sep=" ")
+        sky_mtx_parsed = np.fromstring(sky_mtx_str, sep=" ")
+        dc_parsed = dc_parsed.reshape(-1, 146, 3)
+        sky_mtx_parsed = sky_mtx_parsed.reshape(146, 4447, 3)
+                  # Matrix operation
+        p = Pool(3)
+        final = p.starmap(matmul, zip(dc_parsed.transpose(2, 0, 1), sky_mtx_parsed.transpose(2, 0, 1)))
+        p.close()
+        p.join()
+
+
+    elif mode == 3:
+        with open(dc_dir, 'r') as f:
+            dc_sun = f.readlines()
+        with open(mtx_dir, 'rb') as f:
+            sun_mtx = np.load(f)
+
+        dc_sun_str = ' '.join(dc_sun[10:]).replace("\t", " ").replace("\n", " ")
+        dc_sun_parsed = np.fromstring(dc_sun_str, sep=" ")
+        dc_sun_parsed = dc_sun_parsed.reshape(-1, 4447, 3)
+
+        sun_mtx = np.array([np.diag(sun_mtx[:, i]) for i in range(3)])
+
+        p = Pool()
+        final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
+        p.close()
+        p.join()
+    else:
+        final = 0
+
+    return_val.append(list(final))
+
+    # final = []
+    #
+    # for mat1, mat2 in zip(dc_total_parsed.transpose(2, 0, 1), sky_mtx_total_parsed.transpose(2, 0, 1)):
+    #     final.append(np.matmul(mat1, mat2).tolist())
+
+
 
 
 
 
 class RadianceResult:
-    __slots__ = ('_rp', '_work_dir', '_scene_daylit')
-    def __init__(self, work_dir, rp):
-        self._work_dir = work_dir
+    __slots__ = ('_rp', '_project_dir', '_scene_daylit','_scene_black_daylit', '_final_result',
+                 '_scene_sun')
+    def __init__(self, project_dir, rp):
+        self._project_dir = project_dir
         self._rp = rp
 
+    # @property
+    # def scene_daylit(self):
+    #     try: return self._scene_daylit
+    #     except:
+    #         logging.info("scene_daylit")
+    #         with open(os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_total), 'r') as f:
+    #             sky_mtx_total = f.readlines()
+    #         with open(self._rp.result_files[0], 'r') as f:
+    #             dc_total = f.readlines()
+    #
+    #         dc_total_str = ' '.join(dc_total[11:]).replace("\t", " ").replace("\n", " ")
+    #         sky_mtx_total_str = ' '.join(sky_mtx_total[8:]).replace("\t", " ").replace("\n", " ")
+    #         dc_total_parsed = np.fromstring(dc_total_str, sep=" ")
+    #         sky_mtx_total_parsed = np.fromstring(sky_mtx_total_str, sep=" ")
+    #         dc_total_parsed = dc_total_parsed.reshape(-1, 146, 3)
+    #         sky_mtx_total_parsed = sky_mtx_total_parsed.reshape(146, 4447, 3)
+    #                   # Matrix operation
+    #         # p = Pool(3)
+    #         # final = p.starmap(matmul, zip(dc_total_parsed.transpose(2, 0, 1), sky_mtx_total_parsed.transpose(2, 0, 1)))
+    #         # p.close()
+    #         # p.join()
+    #
+    #         final = []
+    #
+    #         for mat1, mat2 in zip(dc_total_parsed.transpose(2, 0, 1), sky_mtx_total_parsed.transpose(2, 0, 1)):
+    #             final.append(np.matmul(mat1, mat2).tolist())
+    #
+    #
+    #
+    #         self._scene_daylit = np.array(final)
+    #         return self._scene_daylit
+    #
+    #
+    # @property
+    # def scene_black_daylit(self):
+    #     try: return self._scene_black_daylit
+    #     except:
+    #         logging.info("scene_black_daylit")
+    #         with open(os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_direct), 'r') as f:
+    #             sky_mtx_direct = f.readlines()
+    #         with open(self._rp.result_files[1], 'r') as f:
+    #             dc_direct = f.readlines()
+    #
+    #         dc_direct_str = ' '.join(dc_direct[11:]).replace("\t", " ").replace("\n", " ")
+    #         sky_mtx_direct_str = ' '.join(sky_mtx_direct[8:]).replace("\t", " ").replace("\n", " ")
+    #         dc_direct_parsed = np.fromstring(dc_direct_str, sep=" ")
+    #         sky_mtx_direct_parsed = np.fromstring(sky_mtx_direct_str, sep=" ")
+    #         dc_direct_parsed = dc_direct_parsed.reshape(-1, 146, 3)
+    #         sky_mtx_direct_parsed = sky_mtx_direct_parsed.reshape(146, 4447, 3)
+    #         ## Matrix operation
+    #
+    #
+    #         # p = Pool()
+    #         # final = p.starmap(matmul, zip(dc_direct_parsed.transpose(2, 0, 1), sky_mtx_direct_parsed.transpose(2, 0, 1)))
+    #         # p.close()
+    #         # p.join()
+    #
+    #         final = []
+    #         for mat1, mat2 in zip(dc_direct_parsed.transpose(2, 0, 1), sky_mtx_direct_parsed.transpose(2, 0, 1)):
+    #             final.append(np.matmul(mat1, mat2).tolist())
+    #
+    #         self._scene_black_daylit = np.array(final)
+    #
+    #         return self._scene_black_daylit
+    #
+    # @property
+    # def scene_sun(self):
+    #     try: return self._scene_sun
+    #     except:
+    #         logging.info("scene_sun")
+    #         with open(self._rp.result_files[2], 'r') as f:
+    #             dc_sun = f.readlines()
+    #         dc_sun_str = ' '.join(dc_sun[10:]).replace("\t", " ").replace("\n", " ")
+    #         dc_sun_parsed = np.fromstring(dc_sun_str, sep=" ")
+    #         dc_sun_parsed = dc_sun_parsed.reshape(-1, 4447, 3)
+    #
+    #         parent_path = Path(__file__).parent
+    #
+    #         with open(os.path.join(parent_path,'dat', 'sunmtx.npy'), 'rb') as f:
+    #             sun_mtx = np.load(f)
+    #
+    #
+    #
+    #         sun_mtx = np.array([np.diag(sun_mtx[:, i]) for i in range(3)])
+    #         # p = Pool()
+    #         # final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
+    #         # p.close()
+    #         # p.join()
+    #
+    #         final = []
+    #         for mat1, mat2 in zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx):
+    #             final.append(np.matmul(mat1, mat2).tolist())
+    #
+    #         self._scene_sun = np.array(final)
+    #         return self._scene_sun
+
     @property
-    def scene_daylit(self):
-        try: return self._scene_daylit
+    def final_result(self):
+        try: return self._final_result
         except:
-            with open(os.path.join(self._work_dir, self._rp._skyfiles.sky_mtx_total), 'rb') as f:
-                sky_mtx_total = f.readlines()
-            with open(self._rp.result_files[0], 'rb') as f:
-                dc_ttoal = f.readlines()
+            logging.info("Now calcualte the final Radiance result")
+            # scene_total = self.scene_daylit
+            # scene_direct = self.scene_black_daylit
+            # scene_sun = self.scene_sun
+            # p = Pool(processes= 10)
+            # p.map(testone, [self.scene_daylit, self.scene_black_daylit, self.scene_sun])
+            # p.close()
+            # p.join()
+            # freeze_support()
+            #
 
-            self._scene_daylit = 0
-        return 0
+            total_mtx_dir = os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_total)
+            total_dc_dir = self._rp.result_files[0]
 
+            direct_mtx_dir = os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_direct)
+            direct_dc_dir =self._rp.result_files[1]
+
+            parent_path = Path(__file__).parent
+            sun_mtx_dir  =os.path.join(parent_path,'dat', 'sunmtx.npy')
+            sun_dc_dir = self._rp.result_files[2]
+
+            manager = multiprocessing.Manager()
+            result_list = manager.list()
+            p1 = Process(target=matop, args=(total_mtx_dir, total_dc_dir, 1,result_list))
+            p2 = Process(target=matop, args=(direct_mtx_dir, direct_dc_dir, 2,result_list))
+            p3 = Process(target=matop, args=(sun_mtx_dir, sun_dc_dir, 3, result_list))
+
+
+            p1.start()
+            p2.start()
+            p3.start()
+
+            p1.join()
+            p2.join()
+            p3.join()
+            # pool = Pool(processes=3)
+            #
+            # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]
+
+            self._final_result = list(result_list)
+            return 0
+            # self._final_result = scene_total + scene_direct
+            # return self._final_result

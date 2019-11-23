@@ -112,7 +112,7 @@ def write(obj, target_folder, project_name='untitled', header=True,
     # add echo to commands and write them to file
     write_to_file(batch_file, '\n'.join(obj.preproc_commands()))
 
-    return batch_file
+    return batch_file, project_folder
 
 
 

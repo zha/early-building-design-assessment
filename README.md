@@ -16,9 +16,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-import honeybee
-import honeybee_energy
-import design_simulation
+
 model = ModelInit(working_dir = r"z:/sdfsdfsds", wea_dir = r"e:/CAN_ON_Toronto.716240_CWEC.epw")
 observer(model)
 model.zone_name = '4' 
