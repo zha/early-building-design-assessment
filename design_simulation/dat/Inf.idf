@@ -1,0 +1,47 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Fractional,                             !- Name
+0,                                      !- Lower Limit Value
+1,                                      !- Upper Limit Value
+Continuous;                             !- Numeric Type
+
+
+!-----------------------------------------------------
+!       Infilteration Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+Inf_sch_day,                            !- Name
+Fractional,                             !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+24:00,                                  !- Time 1 {hh:mm}
+1;                                      !- Value Until Time 1
+
+
+Schedule:Week:Daily,
+Inf_sch_week,                           !- Name
+Inf_sch_day,                            !- Sunday Schedule:Day Name
+Inf_sch_day,                            !- Monday Schedule:Day Name
+Inf_sch_day,                            !- Tuesday Schedule:Day Name
+Inf_sch_day,                            !- Wednesday Schedule:Day Name
+Inf_sch_day,                            !- Thursday Schedule:Day Name
+Inf_sch_day,                            !- Friday Schedule:Day Name
+Inf_sch_day,                            !- Saturday Schedule:Day Name
+Inf_sch_day,                            !- Holiday Schedule:Day Name
+Inf_sch_day,                            !- SummerDesignDay Schedule:Day Name
+Inf_sch_day,                            !- WinterDesignDay Schedule:Day Name
+Inf_sch_day,                            !- CustomDay1 Schedule:Day Name
+Inf_sch_day;                            !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+Inf_year,                               !- Name
+Fractional,                             !- Schedule Type Limits Name
+Inf_sch_week,                           !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

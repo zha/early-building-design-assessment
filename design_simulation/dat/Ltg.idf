@@ -1,0 +1,60 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Fractional,                             !- Name
+0,                                      !- Lower Limit Value
+1,                                      !- Upper Limit Value
+Continuous;                             !- Numeric Type
+
+
+!-----------------------------------------------------
+!       Lighting Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+Ltg_day,                                !- Name
+Fractional,                             !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+05:00,                                  !- Time 1 {hh:mm}
+0,                                      !- Value Until Time 1
+06:00,                                  !- Time 2 {hh:mm}
+0.2,                                    !- Value Until Time 2
+08:00,                                  !- Time 3 {hh:mm}
+0.5,                                    !- Value Until Time 3
+18:00,                                  !- Time 4 {hh:mm}
+0,                                      !- Value Until Time 4
+21:00,                                  !- Time 5 {hh:mm}
+0.9,                                    !- Value Until Time 5
+22:00,                                  !- Time 6 {hh:mm}
+0.8,                                    !- Value Until Time 6
+23:00,                                  !- Time 7 {hh:mm}
+0.6,                                    !- Value Until Time 7
+24:00,                                  !- Time 8 {hh:mm}
+0.3;                                    !- Value Until Time 8
+
+Schedule:Week:Daily,
+Ltg_week_rule,                          !- Name
+Ltg_day,                                !- Sunday Schedule:Day Name
+Ltg_day,                                !- Monday Schedule:Day Name
+Ltg_day,                                !- Tuesday Schedule:Day Name
+Ltg_day,                                !- Wednesday Schedule:Day Name
+Ltg_day,                                !- Thursday Schedule:Day Name
+Ltg_day,                                !- Friday Schedule:Day Name
+Ltg_day,                                !- Saturday Schedule:Day Name
+Ltg_day,                                !- Holiday Schedule:Day Name
+Ltg_day,                                !- SummerDesignDay Schedule:Day Name
+Ltg_day,                                !- WinterDesignDay Schedule:Day Name
+Ltg_day,                                !- CustomDay1 Schedule:Day Name
+Ltg_day;                                !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+Ltg_Sch,                                !- Name
+Fractional,                             !- Schedule Type Limits Name
+Ltg_week_rule,                          !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

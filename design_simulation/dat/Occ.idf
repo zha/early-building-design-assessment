@@ -1,0 +1,69 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Fractional,                             !- Name
+0,                                      !- Lower Limit Value
+1,                                      !- Upper Limit Value
+Continuous;                             !- Numeric Type
+
+
+!-----------------------------------------------------
+!       Occupancy Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+Occ_weekday,                            !- Name
+Fractional,                             !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+05:00,                                  !- Time 1 {hh:mm}
+0.9,                                    !- Value Until Time 1
+06:00,                                  !- Time 2 {hh:mm}
+0.7,                                    !- Value Until Time 2
+07:00,                                  !- Time 3 {hh:mm}
+0.4,                                    !- Value Until Time 3
+16:00,                                  !- Time 4 {hh:mm}
+0.3,                                    !- Value Until Time 4
+17:00,                                  !- Time 5 {hh:mm}
+0.5,                                    !- Value Until Time 5
+24:00,                                  !- Time 6 {hh:mm}
+0.9;                                    !- Value Until Time 6
+
+Schedule:Day:Interval,
+Occ_weekend, !- Name
+Fractional,                             !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+05:00,                                  !- Time 1 {hh:mm}
+0.9,                                    !- Value Until Time 1
+06:00,                                  !- Time 2 {hh:mm}
+0.7,                                    !- Value Until Time 2
+17:00,                                  !- Time 3 {hh:mm}
+0.5,                                    !- Value Until Time 3
+24:00,                                  !- Time 4 {hh:mm}
+0.9;                                    !- Value Until Time 4
+
+Schedule:Week:Daily,
+Occ_week_rule,                          !- Name
+Occ_weekend,                            !- Sunday Schedule:Day Name
+Occ_weekday,                            !- Monday Schedule:Day Name
+Occ_weekday,                            !- Tuesday Schedule:Day Name
+Occ_weekday,                            !- Wednesday Schedule:Day Name
+Occ_weekday,                            !- Thursday Schedule:Day Name
+Occ_weekday,                            !- Friday Schedule:Day Name
+Occ_weekend,                            !- Saturday Schedule:Day Name
+Occ_weekend,                            !- Holiday Schedule:Day Name
+Occ_weekday,                            !- SummerDesignDay Schedule:Day Name
+Occ_weekday,                            !- WinterDesignDay Schedule:Day Name
+Occ_weekday,                            !- CustomDay1 Schedule:Day Name
+Occ_weekday;                            !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+Zone Occ Sch,                           !- Name
+Fractional,                             !- Schedule Type Limits Name
+Occ_week_rule,                          !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

@@ -1,0 +1,46 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Discrete,                               !- Name
+0,                                      !- Lower Limit Value {BasedOnField A3}
+1,                                      !- Upper Limit Value {BasedOnField A3}
+DISCRETE;                               !- Numeric Type
+
+!-----------------------------------------------------
+!       Ventilation Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+Ven_day,                                !- Name
+Discrete,                               !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+24:00,                                  !- Time 1 {hh:mm}
+1;                                      !- Value Until Time 1
+
+
+Schedule:Week:Daily,
+Ven_week,                               !- Name
+Ven_day,                                !- Sunday Schedule:Day Name
+Ven_day,                                !- Monday Schedule:Day Name
+Ven_day,                                !- Tuesday Schedule:Day Name
+Ven_day,                                !- Wednesday Schedule:Day Name
+Ven_day,                                !- Thursday Schedule:Day Name
+Ven_day,                                !- Friday Schedule:Day Name
+Ven_day,                                !- Saturday Schedule:Day Name
+Ven_day,                                !- Holiday Schedule:Day Name
+Ven_day,                                !- SummerDesignDay Schedule:Day Name
+Ven_day,                                !- WinterDesignDay Schedule:Day Name
+Ven_day,                                !- CustomDay1 Schedule:Day Name
+Ven_day;                                !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+Ven_sch_year,                           !- Name
+Discrete,                               !- Schedule Type Limits Name
+Ven_week,                               !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

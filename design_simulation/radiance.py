@@ -137,8 +137,8 @@ def matop(mtx_dir, dc_dir, mode, return_val):
 
 
 class RadianceResult:
-    __slots__ = ('_rp', '_project_dir', '_scene_daylit','_scene_black_daylit', '_final_result',
-                 '_scene_sun')
+    __slots__ = ('_rp', '_project_dir', '_scene_daylit','_scene_black_daylit', '_results',
+                 '_scene_sun', '_total', '_direct', '_diffuse')
     def __init__(self, project_dir, rp):
         self._project_dir = project_dir
         self._rp = rp
@@ -240,8 +240,8 @@ class RadianceResult:
     #         return self._scene_sun
 
     @property
-    def final_result(self):
-        try: return self._final_result
+    def results(self):
+        try: return self._results
         except:
             logging.info("Now calcualte the final Radiance result")
             # scene_total = self.scene_daylit
@@ -281,8 +281,12 @@ class RadianceResult:
             # pool = Pool(processes=3)
             #
             # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]
+            result_list = list(result_list)
+            self._total = result_list[0] - result_list[1] + result_list[2]
+            self._direct = result_list[2]
+            self._diffuse = self._total - self._direct
+            self._results = [self._total, self._direct, self._diffuse]
 
-            self._final_result = list(result_list)
-            return 0
+            return self._results
             # self._final_result = scene_total + scene_direct
             # return self._final_result

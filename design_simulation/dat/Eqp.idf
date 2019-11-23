@@ -1,0 +1,60 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Fractional,                             !- Name
+0,                                      !- Lower Limit Value
+1,                                      !- Upper Limit Value
+Continuous;                             !- Numeric Type
+
+
+!-----------------------------------------------------
+!       Equipment Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+EQP_day,                                !- Name
+Fractional,                             !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+06:00,                                  !- Time 1 {hh:mm}
+0.2,                                    !- Value Until Time 1
+08:00,                                  !- Time 2 {hh:mm}
+0.8,                                    !- Value Until Time 2
+15:00,                                  !- Time 3 {hh:mm}
+0.4,                                    !- Value Until Time 3
+16:00,                                  !- Time 4 {hh:mm}
+0.5,                                    !- Value Until Time 4
+17:00,                                  !- Time 5 {hh:mm}
+0.2,                                    !- Value Until Time 5
+19:00,                                  !- Time 6 {hh:mm}
+0.9,                                    !- Value Until Time 6
+22:00,                                  !- Time 7 {hh:mm}
+0.5,                                    !- Value Until Time 7
+24:00,                                  !- Time 8 {hh:mm}
+0.3;                                    !- Value Until Time 8
+
+Schedule:Week:Daily,
+EQP_week_rule,                          !- Name
+EQP_day,                                !- Sunday Schedule:Day Name
+EQP_day,                                !- Monday Schedule:Day Name
+EQP_day,                                !- Tuesday Schedule:Day Name
+EQP_day,                                !- Wednesday Schedule:Day Name
+EQP_day,                                !- Thursday Schedule:Day Name
+EQP_day,                                !- Friday Schedule:Day Name
+EQP_day,                                !- Saturday Schedule:Day Name
+EQP_day,                                !- Holiday Schedule:Day Name
+EQP_day,                                !- SummerDesignDay Schedule:Day Name
+EQP_day,                                !- WinterDesignDay Schedule:Day Name
+EQP_day,                                !- CustomDay1 Schedule:Day Name
+EQP_day;                                !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+EQP_year,                                !- Name
+Fractional,                             !- Schedule Type Limits Name
+EQP_week_rule,                          !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

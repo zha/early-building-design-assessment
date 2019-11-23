@@ -1,0 +1,48 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Act_limit,                              !- Name
+0,                                      !- Lower Limit Value
+,                                       !- Upper Limit Value
+Continuous,                             !- Numeric Type
+ActivityLevel;                          !- Unit Type
+
+
+!-----------------------------------------------------
+!       ActivityLevel Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+Activity_sch_day,                       !- Name
+Act_limit,                              !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+24:00,                                  !- Time 1 {hh:mm}
+95;                                     !- Value Until Time 1
+
+
+Schedule:Week:Daily,
+Activity_sch_week,                      !- Name
+Activity_sch_day,                       !- Sunday Schedule:Day Name
+Activity_sch_day,                       !- Monday Schedule:Day Name
+Activity_sch_day,                       !- Tuesday Schedule:Day Name
+Activity_sch_day,                       !- Wednesday Schedule:Day Name
+Activity_sch_day,                       !- Thursday Schedule:Day Name
+Activity_sch_day,                       !- Friday Schedule:Day Name
+Activity_sch_day,                       !- Saturday Schedule:Day Name
+Activity_sch_day,                       !- Holiday Schedule:Day Name
+Activity_sch_day,                       !- SummerDesignDay Schedule:Day Name
+Activity_sch_day,                       !- WinterDesignDay Schedule:Day Name
+Activity_sch_day,                       !- CustomDay1 Schedule:Day Name
+Activity_sch_day;                       !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+Act_sch,                                !- Name
+Act_limit,                              !- Schedule Type Limits Name
+Activity_sch_week,                      !- Schedule:Week Name 1
+1,                                      !- Start Month 1
+1,                                      !- Start Day 1
+12,                                     !- End Month 1
+31;                                     !- End Day 1

@@ -11,7 +11,7 @@ pip install git+https://github.com/zha/early-building-design-assessment.git
 - [ ] Draft comfort
 - [ ] PMV calculation
 - [ ] Comfort assessment
-
+- [ ] Better documentation
 
 ## Usage example
 ```python
@@ -42,6 +42,6 @@ model.update()
 
 ## Acknowledgment
 * JF, MT, LO (no particular order)
-* Ladybug Tools, CM, MM
+* Ladybug Tools :beetle::honeybee:, CM, MR
 * NSERC, ON
 * RDH

@@ -1,0 +1,138 @@
+!-----------------------------------------------------
+!       ScheduleTypeLimits
+!-----------------------------------------------------
+
+ScheduleTypeLimits,
+Avail_limit,                            !- Name
+0,                                      !- Lower Limit Value
+1,                                      !- Upper Limit Value
+Discrete,                               !- Numeric Type
+availability;                           !- Unit Type
+
+
+!-----------------------------------------------------
+!       Cooling Availability Schedule
+!-----------------------------------------------------
+
+Schedule:Day:Interval,
+on1,                                     !- Name
+Avail_limit,                            !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+24:00,                                  !- Time 1 {hh:mm}
+1;                                      !- Value Until Time 1
+
+Schedule:Day:Interval,
+off1,                                    !- Name
+Avail_limit,                            !- Schedule Type Limits Name
+No,                                     !- Interpolate to Timestep
+24:00,                                  !- Time 1 {hh:mm}
+0;                                      !- Value Until Time 1
+
+Schedule:Week:Daily,
+Weeks_always_off11,                       !- Name
+off1,                                    !- Sunday Schedule:Day Name
+off1,                                    !- Mon1day Schedule:Day Name
+off1,                                    !- Tuesday Schedule:Day Name
+off1,                                    !- Wednesday Schedule:Day Name
+off1,                                    !- Thursday Schedule:Day Name
+off1,                                    !- Friday Schedule:Day Name
+off1,                                    !- Saturday Schedule:Day Name
+off1,                                    !- Holiday Schedule:Day Name
+off1,                                    !- SummerDesignDay Schedule:Day Name
+off1,                                    !- WinterDesignDay Schedule:Day Name
+off1,                                    !- CustomDay1 Schedule:Day Name
+off1;                                    !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Week:Daily,
+Week_cooling_switch_on1,                         !- Name
+off1,                                    !- Sunday Schedule:Day Name
+off1,                                    !- Mon1day Schedule:Day Name
+on1,                                     !- Tuesday Schedule:Day Name
+on1,                                     !- Wednesday Schedule:Day Name
+on1,                                     !- Thursday Schedule:Day Name
+on1,                                     !- Friday Schedule:Day Name
+on1,                                     !- Saturday Schedule:Day Name
+off1,                                    !- Holiday Schedule:Day Name
+off1,                                    !- SummerDesignDay Schedule:Day Name
+off1,                                    !- WinterDesignDay Schedule:Day Name
+off1,                                    !- CustomDay1 Schedule:Day Name
+off1;                                    !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Week:Daily,
+Weeks_always_on1,                        !- Name
+on1,                                     !- Sunday Schedule:Day Name
+on1,                                     !- Mon1day Schedule:Day Name
+on1,                                     !- Tuesday Schedule:Day Name
+on1,                                     !- Wednesday Schedule:Day Name
+on1,                                     !- Thursday Schedule:Day Name
+on1,                                     !- Friday Schedule:Day Name
+on1,                                     !- Saturday Schedule:Day Name
+on1,                                    !- Holiday Schedule:Day Name
+on1,                                    !- SummerDesignDay Schedule:Day Name
+on1,                                    !- WinterDesignDay Schedule:Day Name
+on1,                                    !- CustomDay1 Schedule:Day Name
+on1;                                    !- CustomDay2 Schedule:Day Name
+
+Schedule:Week:Daily,
+Week_cooling_switch_off1,                        !- Name
+on1,                                     !- Sunday Schedule:Day Name
+on1,                                     !- Mon1day Schedule:Day Name
+off1,                                    !- Tuesday Schedule:Day Name
+off1,                                    !- Wednesday Schedule:Day Name
+off1,                                    !- Thursday Schedule:Day Name
+off1,                                    !- Friday Schedule:Day Name
+off1,                                    !- Saturday Schedule:Day Name
+off1,                                    !- Holiday Schedule:Day Name
+off1,                                    !- SummerDesignDay Schedule:Day Name
+off1,                                    !- WinterDesignDay Schedule:Day Name
+off1,                                    !- CustomDay1 Schedule:Day Name
+off1;                                    !- CustomDay2 Schedule:Day Name
+
+Schedule:Week:Daily,
+Weeks_always_off12,                       !- Name
+off1,                                    !- Sunday Schedule:Day Name
+off1,                                    !- Mon1day Schedule:Day Name
+off1,                                    !- Tuesday Schedule:Day Name
+off1,                                    !- Wednesday Schedule:Day Name
+off1,                                    !- Thursday Schedule:Day Name
+off1,                                    !- Friday Schedule:Day Name
+off1,                                    !- Saturday Schedule:Day Name
+off1,                                    !- Holiday Schedule:Day Name
+off1,                                    !- SummerDesignDay Schedule:Day Name
+off1,                                    !- WinterDesignDay Schedule:Day Name
+off1,                                    !- CustomDay1 Schedule:Day Name
+off1;                                    !- CustomDay2 Schedule:Day Name
+
+
+Schedule:Year,
+cooling_year,                           !- Name
+Avail_limit,                            !- Schedule Type Limits Name
+Weeks_always_off11,                       !- Schedule:Week Name 1
+1,                                      !- Start Mon1th 1
+1,                                      !- Start Day 1
+5,                                      !- End Mon1th 1
+30,                                     !- End Day 1
+Week_cooling_switch_on1,                         !- Schedule:Week Name 2
+5,                                      !- Start Mon1th 2
+31,                                     !- Start Day 2
+6,                                      !- End Mon1th 2
+6,                                      !- End Day 2
+Weeks_always_on1,                        !- Schedule:Week Name 3
+6,                                      !- Start Mon1th 3
+7,                                      !- Start Day 3
+9,                                      !- End Mon1th 3
+12,                                     !- End Day 3
+Week_cooling_switch_off1,                        !- Schedule:Week Name 4
+9,                                      !- Start Mon1th 4
+13,                                     !- Start Day 4
+9,                                      !- End Mon1th 4
+19,                                     !- End Day 4
+Weeks_always_off12,                       !- Schedule:Week Name 5
+9,                                      !- Start Mon1th 5
+20,                                     !- Start Day 5
+12,                                     !- End Mon1th 5
+31;                                     !- End Day 5
+
+
