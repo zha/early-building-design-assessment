@@ -1,6 +1,6 @@
-# Early building design assessment
+# A simulation tool for early building design assessment
 A simulation workflow built for my Master's thesis at UofT
-* To install:
+##  Installation:
 ```python
 pip install git+https://github.com/zha/early-building-design-assessment.git
 ```
@@ -9,7 +9,8 @@ pip install git+https://github.com/zha/early-building-design-assessment.git
 - [x] EnergyPlus
 - [x] Radiance
 - [ ] Draft comfort
-- [ ] Post processing comfort
+- [ ] PMV calculation
+- [ ] Comfort assessment
 
 
 ## Usage example
