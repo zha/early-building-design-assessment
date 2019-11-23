@@ -78,7 +78,9 @@ def matmul(mat1, mat2):
     return np.matmul(mat1, mat2).tolist()
 
 def matop(mtx_dir, dc_dir, mode, return_val):
-
+    print(mode)
+    print(mtx_dir)
+    print(dc_dir)
 
     if mode ==1 or mode ==2:
         with open(mtx_dir, 'r') as f:
@@ -118,10 +120,11 @@ def matop(mtx_dir, dc_dir, mode, return_val):
         final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
         p.close()
         p.join()
-    else:
-        final = 0
 
-    return_val.append(list(final))
+    final = (np.array(final).transpose(1,2,0) * [47.4, 119.9, 11.6]).sum(axis = 2)
+    # final = np.array(final)
+
+    return_val[mode - 1] = final.tolist()
 
     # final = []
     #
@@ -262,7 +265,7 @@ class RadianceResult:
             sun_dc_dir = self._rp.result_files[2]
 
             manager = multiprocessing.Manager()
-            result_list = manager.list()
+            result_list = manager.list([None, None, None])
             p1 = Process(target=matop, args=(total_mtx_dir, total_dc_dir, 1,result_list))
             p2 = Process(target=matop, args=(direct_mtx_dir, direct_dc_dir, 2,result_list))
             p3 = Process(target=matop, args=(sun_mtx_dir, sun_dc_dir, 3, result_list))

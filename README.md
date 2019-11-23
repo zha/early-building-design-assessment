@@ -4,7 +4,15 @@ A simulation workflow built for my Master's thesis at UofT
 ```python
 pip install git+https://github.com/zha/early-building-design-assessment.git
 ```
-# Usage example
+## Dev Status
+- [x] Geometry
+- [x] EnergyPlus
+- [x] Radiance
+- [ ] Draft comfort
+- [ ] Post processing comfort
+
+
+## Usage example
 ```python
 
 from design_simulation import ModelInit, observer
@@ -31,5 +39,8 @@ model.update()
 
 ```
 
-# Acknowledgment
-To be done
+## Acknowledgment
+* JF, MT, LO (no particular order)
+* Ladybug Tools, CM, MM
+* NSERC, ON
+* RDH
