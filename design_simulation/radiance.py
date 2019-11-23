@@ -4,6 +4,7 @@ import numpy as np
 from honeybeeradiance.radiance.analysisgrid import AnalysisGrid
 from honeybeeradiance.radiance.sky.skymatrix import SkyMatrix
 from honeybeeradiance.radiance.recipe.annual.gridbased import GridBased
+from honeybeeradiance.radiance.parameters.rfluxmtx import RfluxmtxParameters
 
 import os
 import logging
@@ -53,8 +54,10 @@ class RadianceModel(object):
 
             flat_testPts = np.array(self.model.testPts).reshape(-1, 3)
             analysis_grid = AnalysisGrid.from_points_and_vectors(flat_testPts)
+            j = {"gridbased_parameters": "-aa 0 -ab 8 -ad 4096 -dc 1 -st 0 -lw 0 -as 1024 -ar 0 -lr 16 -dt 0 -dr 6 -ds 0.02 -dp 0"}
+            params = RfluxmtxParameters.from_json(j)
             self._rp = GridBased(sky_mtx=sky, analysis_grids=(analysis_grid,), simulation_type=1,
-                           hb_objects=(self.room,), reuse_daylight_mtx=False)  # ,radiance_parameters =  RfluxmtxParameters(0))
+                           hb_objects=(self.room,), reuse_daylight_mtx=False, radiance_parameters = params)  # ,radiance_parameters =  RfluxmtxParameters(0))
 
             return self._rp
 
@@ -282,9 +285,10 @@ class RadianceResult:
             #
             # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]
             result_list = list(result_list)
-            self._total = result_list[0] - result_list[1] + result_list[2]
+            self._total = (np.array(result_list[0]) - np.array(result_list[1])\
+                          + np.array(result_list[2])).tolist()
             self._direct = result_list[2]
-            self._diffuse = self._total - self._direct
+            self._diffuse = (np.array(self._total) - np.array(self._direct)).tolist()
             self._results = [self._total, self._direct, self._diffuse]
 
             return self._results
