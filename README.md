@@ -17,6 +17,7 @@ pip install git+https://github.com/zha/honeybee.git
 - [ ] Draft comfort
 - [ ] PMV calculation
 - [ ] Comfort assessment
+- [ ] Clean up
 - [ ] Better documentation
 
 ## Usage example
@@ -50,4 +51,4 @@ model.update()
 * JF, MT, LO (no particular order)
 * Ladybug Tools :beetle::honeybee:, CM, MR
 * NSERC, ON
-* RDH
+* DH from RDH
