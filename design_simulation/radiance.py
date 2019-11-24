@@ -146,101 +146,15 @@ class RadianceResult:
         self._project_dir = project_dir
         self._rp = rp
 
-    # @property
-    # def scene_daylit(self):
-    #     try: return self._scene_daylit
-    #     except:
-    #         logging.info("scene_daylit")
-    #         with open(os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_total), 'r') as f:
-    #             sky_mtx_total = f.readlines()
-    #         with open(self._rp.result_files[0], 'r') as f:
-    #             dc_total = f.readlines()
-    #
-    #         dc_total_str = ' '.join(dc_total[11:]).replace("\t", " ").replace("\n", " ")
-    #         sky_mtx_total_str = ' '.join(sky_mtx_total[8:]).replace("\t", " ").replace("\n", " ")
-    #         dc_total_parsed = np.fromstring(dc_total_str, sep=" ")
-    #         sky_mtx_total_parsed = np.fromstring(sky_mtx_total_str, sep=" ")
-    #         dc_total_parsed = dc_total_parsed.reshape(-1, 146, 3)
-    #         sky_mtx_total_parsed = sky_mtx_total_parsed.reshape(146, 4447, 3)
-    #                   # Matrix operation
-    #         # p = Pool(3)
-    #         # final = p.starmap(matmul, zip(dc_total_parsed.transpose(2, 0, 1), sky_mtx_total_parsed.transpose(2, 0, 1)))
-    #         # p.close()
-    #         # p.join()
-    #
-    #         final = []
-    #
-    #         for mat1, mat2 in zip(dc_total_parsed.transpose(2, 0, 1), sky_mtx_total_parsed.transpose(2, 0, 1)):
-    #             final.append(np.matmul(mat1, mat2).tolist())
-    #
-    #
-    #
-    #         self._scene_daylit = np.array(final)
-    #         return self._scene_daylit
-    #
-    #
-    # @property
-    # def scene_black_daylit(self):
-    #     try: return self._scene_black_daylit
-    #     except:
-    #         logging.info("scene_black_daylit")
-    #         with open(os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_direct), 'r') as f:
-    #             sky_mtx_direct = f.readlines()
-    #         with open(self._rp.result_files[1], 'r') as f:
-    #             dc_direct = f.readlines()
-    #
-    #         dc_direct_str = ' '.join(dc_direct[11:]).replace("\t", " ").replace("\n", " ")
-    #         sky_mtx_direct_str = ' '.join(sky_mtx_direct[8:]).replace("\t", " ").replace("\n", " ")
-    #         dc_direct_parsed = np.fromstring(dc_direct_str, sep=" ")
-    #         sky_mtx_direct_parsed = np.fromstring(sky_mtx_direct_str, sep=" ")
-    #         dc_direct_parsed = dc_direct_parsed.reshape(-1, 146, 3)
-    #         sky_mtx_direct_parsed = sky_mtx_direct_parsed.reshape(146, 4447, 3)
-    #         ## Matrix operation
-    #
-    #
-    #         # p = Pool()
-    #         # final = p.starmap(matmul, zip(dc_direct_parsed.transpose(2, 0, 1), sky_mtx_direct_parsed.transpose(2, 0, 1)))
-    #         # p.close()
-    #         # p.join()
-    #
-    #         final = []
-    #         for mat1, mat2 in zip(dc_direct_parsed.transpose(2, 0, 1), sky_mtx_direct_parsed.transpose(2, 0, 1)):
-    #             final.append(np.matmul(mat1, mat2).tolist())
-    #
-    #         self._scene_black_daylit = np.array(final)
-    #
-    #         return self._scene_black_daylit
-    #
-    # @property
-    # def scene_sun(self):
-    #     try: return self._scene_sun
-    #     except:
-    #         logging.info("scene_sun")
-    #         with open(self._rp.result_files[2], 'r') as f:
-    #             dc_sun = f.readlines()
-    #         dc_sun_str = ' '.join(dc_sun[10:]).replace("\t", " ").replace("\n", " ")
-    #         dc_sun_parsed = np.fromstring(dc_sun_str, sep=" ")
-    #         dc_sun_parsed = dc_sun_parsed.reshape(-1, 4447, 3)
-    #
-    #         parent_path = Path(__file__).parent
-    #
-    #         with open(os.path.join(parent_path,'dat', 'sunmtx.npy'), 'rb') as f:
-    #             sun_mtx = np.load(f)
-    #
-    #
-    #
-    #         sun_mtx = np.array([np.diag(sun_mtx[:, i]) for i in range(3)])
-    #         # p = Pool()
-    #         # final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
-    #         # p.close()
-    #         # p.join()
-    #
-    #         final = []
-    #         for mat1, mat2 in zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx):
-    #             final.append(np.matmul(mat1, mat2).tolist())
-    #
-    #         self._scene_sun = np.array(final)
-    #         return self._scene_sun
+    @property
+    def total(self):
+        return self._total
+    @property
+    def direct(self):
+        return self._direct
+    @property
+    def diffuse(self):
+        return self._diffuse
 
     @property
     def results(self):

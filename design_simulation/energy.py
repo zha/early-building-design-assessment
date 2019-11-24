@@ -25,6 +25,9 @@ from honeybee.boundarycondition import Outdoors
 from honeybee_energy.run import run_idf
 import os
 import logging
+from pathlib import Path
+import pandas as pd
+import numpy as np
 
 
 # TODO: CEHCK INPUT1
@@ -79,17 +82,24 @@ class EnergyModel:
             for aperture in self.model.apertures:
                 aperture.properties.energy.construction = double_low_e
 
-            occ_sch_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\occ.idf'
+            parent_path = Path(__file__).parent
+
+            occ_sch_dir = os.path.join(parent_path, 'dat', 'occ.idf')
             occ_sch = ScheduleRuleset.extract_all_from_idf_file(occ_sch_dir)
-            act_sch_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\act.idf'
+
+            act_sch_dir = os.path.join(parent_path, 'dat', 'act.idf')
             act_sch = ScheduleRuleset.extract_all_from_idf_file(act_sch_dir)
-            ltg_sch_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\ltg.idf'
+
+            ltg_sch_dir = os.path.join(parent_path, 'dat', 'ltg.idf')
             ltg_sch = ScheduleRuleset.extract_all_from_idf_file(ltg_sch_dir)
-            eqp_sch_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\eqp.idf'
+
+            eqp_sch_dir = os.path.join(parent_path, 'dat', 'eqp.idf')
             eqp_sch = ScheduleRuleset.extract_all_from_idf_file(eqp_sch_dir)
-            clg_avail_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\CLG_availiability.idf'
+
+            clg_avail_dir = os.path.join(parent_path, 'dat', 'CLG_availiability.idf')
             clg_avail = ScheduleRuleset.extract_all_from_idf_file(clg_avail_dir)
-            htg_avail_dir = r'C:\Users\Administrator\Google Drive\ladybug_pypi_test\idf\HTG_availiability.idf'
+
+            htg_avail_dir = os.path.join(parent_path, 'dat', 'HTG_availiability.idf')
             htg_avail = ScheduleRuleset.extract_all_from_idf_file(htg_avail_dir)
 
             always_on = ScheduleRuleset.from_constant_value('Always on', 1, schedule_type_limit=schedule_types.on_off)
@@ -131,8 +141,16 @@ class EnergyModel:
 
             sim_par = SimulationParameter(simulation_control=sim_control)
             sim_par.output.add_zone_energy_use()
+            sim_par.output.add_hvac_energy_use()
+
             sim_par.output.add_gains_and_losses()
             sim_par.output.add_comfort_metrics()
+            sim_par.output.add_stratification_variables()
+            sim_par.output.add_surface_temperature()
+            sim_par.output.add_surface_energy_flow()
+            sim_par.output.add_glazing_solar()
+            sim_par.output.add_energy_balance_variables()
+            sim_par.output.add_comfort_map_variables()
 
             sim_par.output.add_output('System Node Temperature')
             sim_par.output.add_output("Zone Ideal Loads Supply Air Sensible Heating Energy")
@@ -175,10 +193,53 @@ class EnergyModel:
             write_to_file_by_name(os.path.join(self.model.working_dir, self.model.zone_name), 'in.idf', self.idf, True)
             run_idf(os.path.join(self.model.working_dir, self.model.zone_name, 'in.idf'), self.model.wea_dir, r"C:\EnergyPlusV9-0-1")
 
-            self._result = EnergyResult()
+            self._result = EnergyResult(os.path.join(self.model.working_dir, self.model.zone_name, 'eplusout.csv'))
 
             return self._result
 
 class EnergyResult:
-    def __init__(self):
-        pass
+    # This object parses the csv files
+    # __slots__ = ('_csv_dir', '_results', '_df')
+    def __init__(self, csv_dir):
+        self._csv_dir = csv_dir
+    @property
+    def csv_dir(self):
+        return self._csv_dir
+    def __getattr__(self, item):
+        try: return self.__dict__[item]
+        except:
+            self.loadresults()
+            return self.__dict__[item]
+
+    def loadresults(self):
+        logging.info("loading result from csv")
+        param_dict = {'heating':'Zone Ideal Loads Supply Air Total Heating Energy',
+                      'cooling':'Zone Ideal Loads Supply Air Total Cooling Energy',
+                      'ceiling_temp':['CEILING','Surface Inside Face Temperature' ],
+                      'floor_temp': ['FLOOR', 'Surface Inside Face Temperature' ],
+                      'west_wall_temp': ['WEST', 'Surface Inside Face Temperature'],
+                      'east_wall_temp': ['EAST', 'Surface Inside Face Temperature'],
+                      'north_wall_temp': ['NORTH', 'Surface Inside Face Temperature'],
+                      'south_wall_temp': ['SOUTH', 'Surface Inside Face Temperature'],
+                      'glazing1_temp': ['GLZ_1', 'Surface Inside Face Temperature'],
+                      'glazing2_temp': ['GLZ_2', 'Surface Inside Face Temperature']}
+        self._df = pd.read_csv(self._csv_dir)
+
+        for key, item in param_dict.items():
+            if isinstance(item, str):
+
+                index = self._df.columns.str.contains(item)
+                assert len(np.where(index)) == 1
+                self.__dict__[key] = self._df[self._df.columns[index]]
+            elif isinstance(item, list):
+                index = self._df.columns.str.contains(item[0]) & self._df.columns.str.contains(item[1])
+                assert len(np.where(index)) == 1
+                self.__dict__[key] = self._df[self._df.columns[index]]
+
+            #
+            # cooling_index = self._df.columns.str.contains('Zone Ideal Loads Supply Air Total Cooling Energy')
+            # assert len(np.where(cooling_index)) == 1
+            # zone_mean_air = self._df.columns.str.contains('Zone Mean Air Temperature')
+            # assert len(np.where(zone_mean_air)) == 1
+
+
