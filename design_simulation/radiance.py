@@ -148,13 +148,22 @@ class RadianceResult:
 
     @property
     def total(self):
-        return self._total
+        try: return self._total
+        except:
+            self.results
+            return self._total
     @property
     def direct(self):
-        return self._direct
+        try: return self._direct
+        except:
+            self.results
+            return self._direct
     @property
     def diffuse(self):
-        return self._diffuse
+        try: return self._diffuse
+        except:
+            self.results
+            return self._diffuse
 
     @property
     def results(self):
@@ -199,10 +208,12 @@ class RadianceResult:
             #
             # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]
             result_list = (np.array(result_list) / 179 ).tolist()
-            self._total = (np.array(result_list[0]) - np.array(result_list[1])\
-                          + np.array(result_list[2])).tolist()
+            diffuse = np.array(result_list[0]) - np.array(result_list[1])
+            diffuse[diffuse < 0] = 0
+            self._diffuse = diffuse
             self._direct = result_list[2]
-            self._diffuse = (np.array(self._total) - np.array(self._direct)).tolist()
+            self._total = self._direct + self._diffuse
+            # self._diffuse = (np.array(self._total) - np.array(self._direct)).tolist()
             self._results = [self._total, self._direct, self._diffuse]
 
             return self._results

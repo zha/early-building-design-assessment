@@ -27,6 +27,7 @@ class ModelInit(object):
                  '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
+                 '_sun_up_altitude',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -244,9 +245,17 @@ class ModelInit(object):
     def sun_up_hoys(self):
         if self._sun_up_hoys is None:
             suns = tuple(self.sunpath.calculate_sun_from_hoy(hoy) for hoy in range(8760))
-            self._sun_up_hoys = tuple(s.hoy for s in suns if s.altitude > 0)
+            result_list = [[s.hoy, s.altitude] for s in suns if s.altitude > 0]
+            self._sun_up_hoys = np.array(result_list).T[0].tolist()
+            self._sun_up_altitude = np.array(result_list).T[1].tolist()
 
         return self._sun_up_hoys
+    @property
+    def sun_up_altitude(self):
+        try: return self._sun_up_altitude
+        except:
+            self.sun_up_hoys
+            return self._sun_up_altitude
 
 
 
