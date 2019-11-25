@@ -210,10 +210,19 @@ class ModelInit(object):
     def apertures(self): # this is useful for energyplus simulation
         return self.exterior_wall_face.apertures
 
+    @property
+    def facenames(self):
+        return [item.name for item in list(self.room.faces) + list(self.apertures)]
+
+
 
     @property
     def viewfactor(self):
-        return self._viewfactor
+        names = [item.name for item in list(self.room.faces) + list(self.apertures)]
+        values = np.moveaxis(np.array(self._viewfactor), -1, 0).tolist()
+
+        vf_dict  = dict(zip(names, values))
+        return vf_dict
 
     @property
     def testPts(self):
@@ -381,15 +390,13 @@ class ModelInit(object):
                     if intersec:
                         faces_count[face_i].append(intersec)
                         # break
-
-            return [len(item) / len(vecs) for item in
-                    faces_count]  # View factor = fraction of the rays intercepted by that surface
-
+            return [len(item) / len(vecs) for i ,item in
+                    enumerate(faces_count)]  # View factor = fraction of the rays intercepted by that surface
         # A signle array contain view factors for all test points and faces
 
         VFs = [[calcVF_ind(faces, testpt_ind) for testpt_ind in first_list] for first_list in testPts]
         assert not (np.array(VFs).sum(axis=2) > 1.01).any()  # Raise flag if any of them is larger than 1.01
-        assert not (np.array(VFs).sum(axis=2) < 0.99).any(), np.array(VFs).sum(axis=2)  # Raise flag if any of them is less than 0.99
+        assert not (np.array(VFs).sum(axis=2) < 0.99).any() # Raise flag if any of them is less than 0.99
 
         # VFs.append(vfunc(testPts, face))
 

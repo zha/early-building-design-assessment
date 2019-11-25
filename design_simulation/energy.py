@@ -193,48 +193,78 @@ class EnergyModel:
             write_to_file_by_name(os.path.join(self.model.working_dir, self.model.zone_name), 'in.idf', self.idf, True)
             run_idf(os.path.join(self.model.working_dir, self.model.zone_name, 'in.idf'), self.model.wea_dir, r"C:\EnergyPlusV9-0-1")
 
-            self._result = EnergyResult(os.path.join(self.model.working_dir, self.model.zone_name, 'eplusout.csv'))
+            self._result = EnergyResult(os.path.join(self.model.working_dir, self.model.zone_name, 'eplusout.csv'), self.model)
 
             return self._result
 
 class EnergyResult:
     # This object parses the csv files
     # __slots__ = ('_csv_dir', '_results', '_df')
-    def __init__(self, csv_dir):
+    def __init__(self, csv_dir, model):
         self._csv_dir = csv_dir
+        self._model= model
+
+    @property
+    def model(self):
+        return self._model
+
     @property
     def csv_dir(self):
         return self._csv_dir
-    def __getattr__(self, item):
-        try: return self.__dict__[item]
+
+    @property
+    def df(self):
+        try: return self._df
         except:
-            self.loadresults()
-            return self.__dict__[item]
+            self._df = pd.read_csv(self._csv_dir)
+            return self._df
 
-    def loadresults(self):
-        logging.info("loading result from csv")
-        param_dict = {'heating':'Zone Ideal Loads Supply Air Total Heating Energy',
-                      'cooling':'Zone Ideal Loads Supply Air Total Cooling Energy',
-                      'ceiling_temp':['CEILING','Surface Inside Face Temperature' ],
-                      'floor_temp': ['FLOOR', 'Surface Inside Face Temperature' ],
-                      'west_wall_temp': ['WEST', 'Surface Inside Face Temperature'],
-                      'east_wall_temp': ['EAST', 'Surface Inside Face Temperature'],
-                      'north_wall_temp': ['NORTH', 'Surface Inside Face Temperature'],
-                      'south_wall_temp': ['SOUTH', 'Surface Inside Face Temperature'],
-                      'glazing1_temp': ['GLZ_1', 'Surface Inside Face Temperature'],
-                      'glazing2_temp': ['GLZ_2', 'Surface Inside Face Temperature']}
-        self._df = pd.read_csv(self._csv_dir)
+    @property
+    def surfacetemps(self):
+        try: return self._surfacetemps
+        except:
+            self._surfacetemps = {}
+            for facename in self.model.facenames:
+                index = self.df.columns.str.lower().str.contains(facename.lower()) &\
+                        self.df.columns.str.lower().str.contains('Surface Inside Face Temperature'.lower())  # searching for commands in the order of the face name
+                assert len(np.where(index)[0]) == 1  #check if only one hit
+                self._surfacetemps.update({facename: self.df[self.df.columns[index]].T.values.tolist()[0]})
+            return self._surfacetemps
 
-        for key, item in param_dict.items():
-            if isinstance(item, str):
+            #             assert len(np.where(index)) == 1
+            #             self.__dict__[key] = self._df[self._df.columns[index]]
 
-                index = self._df.columns.str.contains(item)
-                assert len(np.where(index)) == 1
-                self.__dict__[key] = self._df[self._df.columns[index]]
-            elif isinstance(item, list):
-                index = self._df.columns.str.contains(item[0]) & self._df.columns.str.contains(item[1])
-                assert len(np.where(index)) == 1
-                self.__dict__[key] = self._df[self._df.columns[index]]
+
+    # def __getattr__(self, item):
+    #     try: return self.__dict__[item]
+    #     except:
+    #         self.loadresults()
+    #         return self.__dict__[item]
+
+    # def loadresults(self):
+    #     logging.info("loading result from csv")
+    #     param_dict = {'heating':'Zone Ideal Loads Supply Air Total Heating Energy',
+    #                   'cooling':'Zone Ideal Loads Supply Air Total Cooling Energy',
+    #                   'ceiling_temp':['CEILING','Surface Inside Face Temperature' ],
+    #                   'floor_temp': ['FLOOR', 'Surface Inside Face Temperature' ],
+    #                   'west_wall_temp': ['WEST', 'Surface Inside Face Temperature'],
+    #                   'east_wall_temp': ['EAST', 'Surface Inside Face Temperature'],
+    #                   'north_wall_temp': ['NORTH', 'Surface Inside Face Temperature'],
+    #                   'south_wall_temp': ['SOUTH', 'Surface Inside Face Temperature'],
+    #                   'glazing1_temp': ['GLZ_1', 'Surface Inside Face Temperature'],
+    #                   'glazing2_temp': ['GLZ_2', 'Surface Inside Face Temperature']}
+    #     self._df = pd.read_csv(self._csv_dir)
+    #
+    #     for key, item in param_dict.items():
+    #         if isinstance(item, str):
+    #
+    #             index = self._df.columns.str.contains(item)
+    #             assert len(np.where(index)) == 1
+    #             self.__dict__[key] = self._df[self._df.columns[index]]
+    #         elif isinstance(item, list):
+    #             index = self._df.columns.str.contains(item[0]) & self._df.columns.str.contains(item[1])
+    #             assert len(np.where(index)) == 1
+    #             self.__dict__[key] = self._df[self._df.columns[index]]
 
             #
             # cooling_index = self._df.columns.str.contains('Zone Ideal Loads Supply Air Total Cooling Energy')
