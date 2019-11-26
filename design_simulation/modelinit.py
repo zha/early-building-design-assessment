@@ -27,7 +27,7 @@ class ModelInit(object):
                  '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
-                 '_sun_up_altitude',
+                 '_sun_up_altitude','testPts_shape',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -370,6 +370,7 @@ class ModelInit(object):
         if regen_testpts:
             logging.info("(Re)calculating test points")
             self._testPts = self.__gentestpts(0, self.__xupper, 0, self.__yupper, self.__testptsheight, 1, 1)
+            self.testPts_shape = [np.array(self._testPts).shape[0], np.array(self._testPts).shape[1]]
         else:
             logging.info("No need to update test points")
 

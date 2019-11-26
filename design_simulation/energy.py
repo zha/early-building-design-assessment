@@ -230,6 +230,22 @@ class EnergyResult:
                 assert len(np.where(index)[0]) == 1  #check if only one hit
                 self._surfacetemps.update({facename: self.df[self.df.columns[index]].T.values.tolist()[0]})
             return self._surfacetemps
+    @property
+    def air_temperature(self):
+        try: return self._air_temperature
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Mean Air Temperature'.lower())
+            assert len(np.where(index)) == 1
+            self._air_temperature = self.df[self._df.columns[index]]
+            return self._air_temperature.values.tolist()
+    @property
+    def relative_humidity(self):
+        try: return self._relative_humidity
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Air Relative Humidity'.lower())
+            assert len(np.where(index)) == 1
+            self._relative_humidity = self.df[self._df.columns[index]]
+            return self._relative_humidity.values.tolist()
 
             #             assert len(np.where(index)) == 1
             #             self.__dict__[key] = self._df[self._df.columns[index]]
