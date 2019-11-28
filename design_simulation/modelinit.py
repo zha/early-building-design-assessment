@@ -13,8 +13,10 @@ from honeybeeradiance.radiance.material.glass import Glass
 from honeybeeradiance.room import Room as Room_rad
 from ladybug.wea import Wea
 from ladybug.sunpath import Sunpath
-
-
+from ladybug_geometry.geometry3d.line import LineSegment3D
+from ladybug_geometry.intersection2d import closest_point2d_on_line2d
+from ladybug_geometry.intersection3d import closest_point3d_on_plane
+import math
 
 
 import itertools
@@ -27,7 +29,7 @@ class ModelInit(object):
                  '_testPts','__faceid', '_room', '__testptsheight', '_interior_wall_faces',
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
-                 '_sun_up_altitude','testPts_shape',
+                 '_sun_up_altitude','testPts_shape', '_angle_factors', '_dist_to_window',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -214,7 +216,16 @@ class ModelInit(object):
     @property
     def facenames(self):
         return [item.name for item in list(self.room.faces) + list(self.apertures)]
+    @property
+    def glzfacenames(self):
+        return [item.name for item in self.apertures]
 
+    @property
+    def angle_factors(self):
+        return self._angle_factors
+    @property
+    def distance_to_window(self):
+        return self._dist_to_window
 
 
     @property
@@ -374,9 +385,10 @@ class ModelInit(object):
         else:
             logging.info("No need to update test points")
 
-        if recalc_vf:
+        if recalc_vf: # in this step, calculate both view factors and angle factor
             logging.info("(Re)calculating view factor")
             self._viewfactor = self.__calcVF(self.testPts, self.opaque_faces_geometry + self.glazing_faces_geometry )
+            self._angle_factors, self._dist_to_window = self.__calcAngleFactor(self.testPts[0], self.glazing_faces_geometry)
         else:
             logging.info("No need to update view factor")
 
@@ -437,6 +449,57 @@ class ModelInit(object):
 
             else:
                 return np.array(xy)
+
+
+
+
+    @staticmethod
+    def __calcAngleFactor(testpts, glz_surfaces):  # angle factor is used for the draft calculation
+
+        def valdiate_closest_point(pre_determined_test_point, glz_face):  # this function is used to validate and determine
+                                                                        # if the closest point is in the glazing surface,
+                                                                        # if not, a new cloest point will be reported
+
+            twod_point = glz_face._plane.xyz_to_xy(pre_determined_test_point)
+            ifin = glz_face.polygon2d.is_point_inside_bound_rect(twod_point)
+            if ifin:
+                the_closest_point = pre_determined_test_point
+
+            elif not ifin:
+                the_closest_point = None
+                distance = np.inf
+                for _s in glz_face.polygon2d.segments:
+                    close_pt = closest_point2d_on_line2d(twod_point, _s)
+                    if twod_point.distance_to_point(close_pt) < distance:
+                        distance = twod_point.distance_to_point(close_pt)
+                        the_closest_point = glz_face._plane.xy_to_xyz(close_pt)
+                    else:
+                        pass
+            #         print(glz_face._plane.xy_to_xyz(the_closest_point))
+
+            return the_closest_point
+
+        anglefactors = []
+        distance_to_glazing = []
+        for glz_srf in glz_surfaces:
+            ind_srf_angle_factor = []
+            ind_srf_dist = []
+            for testpt in testpts:
+                closest = closest_point3d_on_plane(testpt, glz_srf.plane)
+                closest = valdiate_closest_point(closest, glz_srf) # correct the cloest test point in case it is not on the galzing
+
+                srfVec = Vector3D((closest - testpt).x, (closest - testpt).y, 0)
+                angle2Srf = math.degrees(glz_srf.plane.n.angle(srfVec))
+                if angle2Srf > 90:
+                    angle2Srf = 180 - angle2Srf
+                angFactor = (90 - abs(angle2Srf)) / 90
+                ind_srf_angle_factor.append(angFactor)
+                dist = glz_srf.plane.distance_to_point(testpt)
+                ind_srf_dist.append(dist)
+            anglefactors.append(ind_srf_angle_factor)
+            distance_to_glazing.append(ind_srf_dist)
+        return anglefactors, distance_to_glazing
+
 
     def bind_to(self, callback):
         logging.info('BOUND TO OBSERVER')

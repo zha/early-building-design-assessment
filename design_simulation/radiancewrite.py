@@ -317,6 +317,10 @@ def _get_commands_daylight_coeff(
 
     return commands, result_files
 
+OutputFiles = namedtuple('OutputFiles',
+                         'sky_mtx_total sky_mtx_direct analemma sunlist analemmaMtx')
+
+SkyCommands = namedtuple('SkyCommands', 'output_files commands')
 
 def get_commands_sky_simplified(project_folder, sky_matrix, reuse=True):
     """Get list of commands to generate the skies.
@@ -329,10 +333,7 @@ def get_commands_sky_simplified(project_folder, sky_matrix, reuse=True):
     output_files in a namedtuple itself (sky_mtx_total, sky_mtx_direct, analemma,
         sunlist, analemmaMtx).
     """
-    OutputFiles = namedtuple('OutputFiles',
-                             'sky_mtx_total sky_mtx_direct analemma sunlist analemmaMtx')
 
-    SkyCommands = namedtuple('SkyCommands', 'output_files commands')
 
     commands = []
 
@@ -370,3 +371,4 @@ def get_commands_sky_simplified(project_folder, sky_matrix, reuse=True):
     of = OutputFiles(sky_mtx_total, sky_mtx_direct, analemma, sunlist, project_folder)
 
     return SkyCommands(commands, of)
+

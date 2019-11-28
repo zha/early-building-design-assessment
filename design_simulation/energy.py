@@ -230,6 +230,14 @@ class EnergyResult:
                 assert len(np.where(index)[0]) == 1  #check if only one hit
                 self._surfacetemps.update({facename: self.df[self.df.columns[index]].T.values.tolist()[0]})
             return self._surfacetemps
+
+    @property
+    def glztemps(self):
+        try: return self._glztemps
+        except:
+            self._glztemps = {name: self.surfacetemps[name] for name in self.model.glzfacenames}
+            return self._glztemps
+
     @property
     def air_temperature(self):
         try: return self._air_temperature
