@@ -7,6 +7,8 @@ from .energy import EnergyModel
 from .radiance import RadianceModel
 from multiprocessing import Process,freeze_support
 import pandas as pd
+from ladybug_comfort.pmv import fanger_pmv
+import multiprocessing
 
 class ComfortModel:
     def __init__(self, initmodel, ):
@@ -127,7 +129,7 @@ class ComfortModel:
         try: return self._airtemp_mapped
         except:
             testpts_shape = self.initmodel.testPts_shape
-            self._airtemp_mapped = np.repeat(self.energymodel.result.air_temperature, repeats= testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T.tolist()
+            self._airtemp_mapped = np.repeat(self.energymodel.result.air_temperature, repeats= testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
             return self._airtemp_mapped
 
     @property
@@ -136,7 +138,7 @@ class ComfortModel:
         except:
             testpts_shape = self.initmodel.testPts_shape
             self._rh_mapped = np.repeat(self.energymodel.result.relative_humidity,
-                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T.tolist()
+                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
             return self._rh_mapped
 
     @property
@@ -146,18 +148,87 @@ class ComfortModel:
         except:
             testpts_shape = self.initmodel.testPts_shape
             self._clo_mapped = np.repeat(self.clo,
-                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T.tolist()
+                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
             return self._clo_mapped
     @property
     def airspeed_mapped(self): # this is only a temporaty implemeation
         testpts_shape = self.initmodel.testPts_shape
-        return  np.empty(testpts_shape[0] * testpts_shape[1], 8760).fill(0.1)
+        airspeed_array = np.empty((testpts_shape[0] * testpts_shape[1], 8760))
+        airspeed_array.fill(0.1)
+        return airspeed_array
 
     @property
-    def PMV(self):
-        try: return self._PMV
+    def met_mapped(self):
+        testpts_shape = self.initmodel.testPts_shape
+        met_array = np.empty((testpts_shape[0] * testpts_shape[1], 8760))
+        met_array.fill(1)
+        return met_array
+
+    @property
+    def PMVandPPD(self):
+        try: return self._PMV, self._PPD, self._heat_loss
         except:
-            pass
+            airtemp = self.airtemp_mapped  #.reshape(-1)
+            mrt = self.totalMRT #.reshape(-1)
+            rh = self.rh_mapped #.reshape(-1)
+            clo = self.clo_mapped #.reshape(-1)
+            airspeed = self.airspeed_mapped #.reshape(-1)
+            met = self.met_mapped #.reshape(-1)
+            logging.info('Calculating PMV and PPD, weeeeee...')
+            allarray = np.array([airtemp, mrt, airspeed, rh, met, clo])
+            split_input = np.array_split(allarray, 4,  axis = 2)
+            # start_time = time.time()
+            #
+            # proc_fanger_calc(*split_input[0])
+            # proc_fanger_calc(*split_input[1])
+            # proc_fanger_calc(*split_input[2])
+            # proc_fanger_calc(*split_input[3])
+            # logging.info(time.time()- start_time)
+            # start_time = time.time()
+            # pmv = np.vectorize(fanger_pmv)
+            # self.result_1 = pmv(*allarray)
+            # logging.info(time.time() - start_time)
+
+
+            start_time = time.time()
+            manager = multiprocessing.Manager()
+            result_list = manager.list([None, None, None, None])
+            p1 = Process(target=proc_fanger_calc, args=(0, result_list, *split_input[0]))
+            p2 = Process(target=proc_fanger_calc, args=(1, result_list, *split_input[1]))
+            p3 = Process(target=proc_fanger_calc, args=(2, result_list, *split_input[2]))
+            p4 = Process(target=proc_fanger_calc, args=(3, result_list, *split_input[3]))
+            p1.start()
+            p2.start()
+            p3.start()
+            p4.start()
+
+            p1.join()
+            p2.join()
+            p3.join()
+            p4.join()
+            result_list = list(result_list)
+            logging.info(time.time()- start_time)
+            self._PMV = np.concatenate((result_list[0][0],result_list[1][0],
+                                        result_list[2][0],result_list[3][0]), axis = 1)
+            self._PPD = np.concatenate((result_list[0][1], result_list[1][1],
+                                        result_list[2][1], result_list[3][1]), axis=1)
+            self._heat_loss = np.concatenate((result_list[0][2], result_list[1][2],
+                                              result_list[2][2], result_list[3][2]), axis=1)
+            return self._PMV, self._PPD, self._heat_loss
+            # self.result_2 = result_list
+            # p1 = Pool(4)
+            # p1.starmap(fanger_pmv, zip(airtemp, mrt, airspeed, rh, met, clo))
+            # p1.close()
+            # p1.join()
+            # logging.info(time.time()- start_time)
+
+
+
+def proc_fanger_calc(i, result_list, *input_array,):
+    pmv = np.vectorize(fanger_pmv)
+    result_list[i] = pmv(*input_array)
+
+
     # def runall(self):
     #     p1 = Process(target=get_energy_and_radiance_at_the_same_time, args=(self.energymodel, self.initmodel))
     #     p2 = Process(target=get_energy_and_radiance_at_the_same_time, args=(self.radiancemodel, self.initmodel))
@@ -179,4 +250,107 @@ class ComfortModel:
 #     model = model1(model2)
 #     model.result
 #     return model
-
+# import math
+# def fanger_pmv(ta, tr, vel, rh, met, clo, wme=0):
+#     """Calculate PMV using only Fanger's original equation.
+#     Note that Fanger's original experiments were conducted at
+#     low air speeds (<0.1 m/s) and the 2015 ASHRAE-55 thermal comfort
+#     standard states that one should use standard effective temperature
+#     (SET) to correct for the cooling effect of air speed in cases
+#     where such speeds exceed 0.1 m/s.  The pmv() function in this module
+#     will apply this SET correction in cases where it is appropriate.
+#     Note:
+#         [1] Fanger, P.O. (1970). Thermal Comfort: Analysis and applications
+#         in environmental engineering. Copenhagen: Danish Technical Press.
+#     Args:
+#         ta: Air temperature [C]
+#         tr: Mean radiant temperature [C]
+#         vel: Relative air velocity [m/s]
+#         rh: Relative humidity [%]
+#         met: Metabolic rate [met]
+#         clo: Clothing [clo]
+#         wme: External work [met], normally around 0 when seated
+#     Returns:
+#         pmv: Predicted mean vote (PMV)
+#         ppd: Percentage of people dissatisfied (PPD) [%]
+#         heat_loss: A dictionary with the 6 heat loss terms of the PMV model.
+#             The dictionary items are as follows:
+#                 'cond': heat loss by conduction [W]
+#                 'sweat': heat loss by sweating [W]
+#                 'res_l': heat loss by latent respiration [W]
+#                 'res_s' heat loss by dry respiration [W]
+#                 'rad': heat loss by radiation [W]
+#                 'conv' heat loss by convection [W]
+#     """
+#
+#     pa = rh * 10. * math.exp(16.6536 - 4030.183 / (ta + 235.))
+#
+#     icl = 0.155 * clo  # thermal insulation of the clothing in M2K/W
+#     m = met * 58.15  # metabolic rate in W/M2
+#     w = wme * 58.15  # external work in W/M2
+#     mw = m - w  # internal heat production in the human body
+#     if icl <= 0.078:
+#         fcl = 1 + (1.29 * icl)
+#     else:
+#         fcl = 1.05 + (0.645 * icl)
+#
+#     # heat transf. coeff. by forced convection
+#     hcf = 12.1 * math.sqrt(vel)
+#     taa = ta + 273.
+#     tra = tr + 273.
+#     tcla = taa + (35.5 - ta) / (3.5 * icl + 0.1)
+#
+#     p1 = icl * fcl
+#     p2 = p1 * 3.96
+#     p3 = p1 * 100.
+#     p4 = p1 * taa
+#     p5 = 308.7 - 0.028 * mw + (p2 * ((tra / 100.) ** 4))
+#     xn = tcla / 100.
+#     xf = tcla / 50.
+#     eps = 0.00015
+#
+#     n = 0
+#     while abs(xn - xf) > eps:
+#         xf = (xf + xn) / 2.
+#         hcn = 2.38 * (abs(100.0 * xf - taa) ** 0.25)
+#         if hcf > hcn:
+#             hc = hcf
+#         else:
+#             hc = hcn
+#         xn = (p5 + p4 * hc - p2 * (xf ** 4)) / (100. + p3 * hc)
+#         n += 1
+#         if n > 150:
+#             print('Max iterations exceeded')
+#             return 1
+#
+#     tcl = 100. * xn - 273.
+#
+#     # heat loss conduction through skin
+#     hl1 = 3.05 * 0.001 * (5733. - (6.99 * mw) - pa)
+#     # heat loss by sweating
+#     if mw > 58.15:
+#         hl2 = 0.42 * (mw - 58.15)
+#     else:
+#         hl2 = 0
+#     # latent respiration heat loss
+#     hl3 = 1.7 * 0.00001 * m * (5867. - pa)
+#     # dry respiration heat loss
+#     hl4 = 0.0014 * m * (34. - ta)
+#     # heat loss by radiation
+#     hl5 = 3.96 * fcl * (math.pow(xn, 4) - math.pow(tra / 100., 4))
+#     # heat loss by convection
+#     hl6 = fcl * hc * (tcl - ta)
+#
+#     ts = 0.303 * math.exp(-0.036 * m) + 0.028
+#     pmv = ts * (mw - hl1 - hl2 - hl3 - hl4 - hl5 - hl6)
+#
+#     # collect heat loss terms.
+#     heat_loss = {
+#         'cond': hl1,
+#         'sweat': hl2,
+#         'res_l': hl3,
+#         'res_s': hl4,
+#         'rad': hl5,
+#         'conv': hl6}
+#
+#     return pmv, heat_loss

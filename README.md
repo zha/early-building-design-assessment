@@ -1,3 +1,4 @@
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 # A simulation tool for early building design assessment
 A simulation workflow built for my Master's thesis at UofT
 ##  Installation:
