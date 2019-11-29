@@ -226,6 +226,11 @@ class ModelInit(object):
     @property
     def distance_to_window(self):
         return self._dist_to_window
+    @property
+    def glzheight(self):
+        ver_lower = self.zone_height / 2 - self.zone_height * np.sqrt(self.WWR / 100) / 2
+        ver_upper = self.zone_height / 2 + self.zone_height * np.sqrt(self.WWR / 100) / 2
+        return ver_upper - ver_lower
 
 
     @property

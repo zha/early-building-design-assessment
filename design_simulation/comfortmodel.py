@@ -9,6 +9,7 @@ from multiprocessing import Process,freeze_support
 import pandas as pd
 from ladybug_comfort.pmv import fanger_pmv
 import multiprocessing
+import math
 
 class ComfortModel:
     def __init__(self, initmodel, ):
@@ -222,7 +223,80 @@ class ComfortModel:
             # p1.join()
             # logging.info(time.time()- start_time)
 
+    @property
+    def downdraft_speed_and_temperature(self):
+        try: return self._draft_speed, self._draft_temp
+        except:
+            # collect all of the necessary information before caluclation
+            airTemp = np.squeeze(self.energymodel.result.air_temperature ) #temporal
+            winsrfsTemp = np.array(list(self.energymodel.result.glztemps.values())).T  # temporal
 
+            spreadFac = .97  # spatial
+            windowHgt = self.initmodel.glzheight   #spatial
+
+            dists = self.initmodel.distance_to_window
+            angFacs = self.initmodel.angle_factors
+            num_of_glazing = np.array(dists).shape[0]
+            num_of_pts = np.array(dists).shape[1]
+
+            def calcVelTemp_i(airTemp, winSrfTempFinal):
+
+                ptVelLists = []
+                ptTemplists = []
+                for srfCount in range(num_of_glazing):
+
+                    ptVelLists.append([])
+                    ptTemplists.append([])
+                    for ptCount in range(num_of_pts):
+
+                        # Compute the temperature difference.
+                        glassAirDelta = airTemp - winSrfTempFinal[srfCount]
+                        if glassAirDelta > 0:
+
+                            dist = dists[srfCount][ptCount]
+                            angFac = angFacs[srfCount][ptCount]
+
+                            if dist < 0.4:
+                                windSpd = self.velMaxClose(glassAirDelta, windowHgt)
+                            elif dist < 2:
+                                windSpd = self.velMaxMid(dist, glassAirDelta, windowHgt)
+                            else:
+                                windSpd = self.velMaxFar(glassAirDelta, windowHgt)
+                            floorAirTemp = self.calcFloorAirTemp(airTemp, dist, glassAirDelta)
+
+                            ptVelLists[srfCount].append((windSpd * ((angFac / (1 / spreadFac)) + (1 - spreadFac))))
+                            ptTemplists[srfCount].append(
+                                airTemp - ((airTemp - floorAirTemp) * ((angFac / (1 / spreadFac)) + (1 - spreadFac))))
+                        else:
+                            ptVelLists[srfCount].append(0)
+                            ptTemplists[srfCount].append(airTemp)
+
+                # Finally, take the max of the velocity and minimum temperature if there are multiple window surfaces
+                ptVelLists = np.amax(ptVelLists, axis = 0)
+                ptTemplists = np.amin(ptTemplists, axis=0)
+                return ptVelLists, ptTemplists
+
+            final_list = [calcVelTemp_i(inputs[0], inputs[1]) for inputs in zip(airTemp, winsrfsTemp)]
+            self._draft_speed = np.array(final_list)[:,0,:]
+            self._draft_temp = np.array(final_list)[:,1,:]
+            return self._draft_speed, self._draft_temp
+    @staticmethod
+    def calcFloorAirTemp(airTemp, dist, deltaT):
+        return airTemp - ((0.3 - (0.034 * dist)) * deltaT)
+    @staticmethod
+    def velMaxClose(deltaT, windowHgt):
+        return 0.083 * (math.sqrt(deltaT * windowHgt))
+    @staticmethod
+    def velMaxMid(dist, deltaT, windowHgt):
+        return 0.143 * ((math.sqrt(deltaT * windowHgt)) / (dist + 1.32))
+    @staticmethod
+    def velMaxFar(deltaT, windowHgt):
+        return 0.043 * (math.sqrt(deltaT * windowHgt))
+
+
+    @property
+    def downdraft_temperature(self):
+        pass
 
 def proc_fanger_calc(i, result_list, *input_array,):
     pmv = np.vectorize(fanger_pmv)
