@@ -244,16 +244,16 @@ class EnergyResult:
         except:
             index = self.df.columns.str.lower().str.contains('Zone Mean Air Temperature'.lower())
             assert len(np.where(index)) == 1
-            self._air_temperature = self.df[self._df.columns[index]]
-            return self._air_temperature.values.tolist()
+            self._air_temperature = self.df[self._df.columns[index]].values.tolist()
+            return self._air_temperature
     @property
     def relative_humidity(self):
         try: return self._relative_humidity
         except:
             index = self.df.columns.str.lower().str.contains('Zone Air Relative Humidity'.lower())
             assert len(np.where(index)) == 1
-            self._relative_humidity = self.df[self._df.columns[index]]
-            return self._relative_humidity.values.tolist()
+            self._relative_humidity = self.df[self._df.columns[index]].values.tolist()
+            return self._relative_humidity
 
             #             assert len(np.where(index)) == 1
             #             self.__dict__[key] = self._df[self._df.columns[index]]

@@ -10,6 +10,10 @@ import pandas as pd
 from ladybug_comfort.pmv import fanger_pmv
 import multiprocessing
 import math
+from ladybug_comfort.pmv import ppd_from_pmv
+from ladybug.dt import DateTime
+from functools import partial
+
 
 class ComfortModel:
     def __init__(self, initmodel, ):
@@ -74,6 +78,65 @@ class ComfortModel:
             self._LW_MRT = np.matmul(vf_array, (surfacetemps + 273.15) ** 4) ** 0.25 - 273.15
             return self._LW_MRT
 
+
+
+
+    def pd_mapped_2D(self, var_name, hour_i = None, month = None, day = None, hod = None, height_i = 0):  # height should be index
+        if hour_i is not None:
+            assert hour_i in range(8760)
+            hoy = hour_i
+        elif all([month is not None, day is not None, hod is not None]):
+            assert (month in range(12)) and (day in range(31)) and (hod in range (24))
+            hoy = DateTime(month = month, day = day, hour = hod).int_hoy
+        else:
+            raise("Something inputs to this function is not right. Check your inputs ")
+
+        xy = self.initmodel.testPts2D.T
+        origional_data = self.__getattribute__(var_name)
+        origional_data_shape = origional_data.shape
+        if origional_data_shape[0] == self.initmodel.testPts_shape[0] * self.initmodel.testPts_shape[1]: ##  Then this data contains all testpoints
+            reshaped = origional_data.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], 8760)
+            mapped_data = self.__generate_pivot_table_2D(xy, reshaped[height_i, :, hoy])
+        elif origional_data_shape[0] == self.initmodel.testPts_shape[1]:  ## This data only contain the 2d test points
+            mapped_data = self.__generate_pivot_table_2D(xy, origional_data[:, hoy])
+        else:
+            raise("Something wrong with the mapped data")
+
+        return mapped_data
+
+
+            # reshaped = self.LW_MRT.reshape(3,-1, 8760)
+            # partialfunc = partial(self.generate_pivot_table_2D, self.initmodel.testPts2D.T)
+            # return np.apply_along_axis(partialfunc, axis = 1 , arr= reshaped)
+
+    @staticmethod
+    def __generate_pivot_table_2D(xy, data):
+        df = pd.DataFrame({"X":xy[0], 'Y': xy[1], 'values':data})
+        return pd.pivot_table(df, values='values', index= ['Y'],  columns = ['X'] )
+
+
+    @property
+    def direct_all_hoys(self):
+        try: return self._direct_all_hoys
+        except:
+            sun_up_array =np.array(self.radiancemodel.result.direct)
+            sun_up_hoys = np.array(self.initmodel.sun_up_hoys).astype(int).tolist()
+            direct_all_hoys = np.empty((sun_up_array.shape[0], 8760))
+            direct_all_hoys[:, sun_up_hoys] = sun_up_array
+            self._direct_all_hoys = direct_all_hoys
+            return self._direct_all_hoys
+    @property
+    def diffuse_all_hoys(self):
+        try:
+            return self._diffuse_all_hoys
+        except:
+            sun_up_array = np.array(self.radiancemodel.result.diffuse)
+            sun_up_hoys = np.array(self.initmodel.sun_up_hoys).astype(int).tolist()
+            diffuse_all_hoys = np.empty((sun_up_array.shape[0], 8760))
+            diffuse_all_hoys[:, sun_up_hoys] = sun_up_array
+            self._diffuse_all_hoys = diffuse_all_hoys
+            return self._diffuse_all_hoys
+
     @property
     def delta_MRT(self):
 
@@ -102,27 +165,27 @@ class ComfortModel:
             p2.join()
 
             p3 = Pool(4)
-            dmrt = p3.map(erf_from_body_solar_flux, list(erf))
+            dmrt = p3.map(mrt_delta_from_erf, list(erf))
             p3.close()
             p3.join()
 
 
             logging.info(time.time() - start_time)
-            self._delta_mrt = np.array(list(dmrt)).reshape(*origional_dims)
+            delta_mrt_sun_up_hoys = np.array(list(dmrt)).reshape(*origional_dims)
+            sun_up_hoys = np.array(self.initmodel.sun_up_hoys).astype(int).tolist()
+            dmrt8760 = np.empty((delta_mrt_sun_up_hoys.shape[0], 8760))
+            dmrt8760[:, sun_up_hoys] = delta_mrt_sun_up_hoys
+            self._delta_mrt = dmrt8760
 
             return self._delta_mrt
 
     @property
-    def totalMRT(self):
+    def totalMRT(self):  # This is for all test points and for all heights
         try: return self._totalMRT
         except:
-
             dmrt = self.delta_MRT
             orimrt = self.LW_MRT
-            sun_up_hoys = np.array(self.initmodel.sun_up_hoys).astype(int).tolist()
-            dmrt8760 = np.empty((orimrt.shape[0], orimrt.shape[1]))
-            dmrt8760[:, sun_up_hoys] = dmrt
-            self._totalMRT = orimrt + dmrt8760
+            self._totalMRT = orimrt + dmrt
             return self._totalMRT
 
     @property
@@ -130,7 +193,8 @@ class ComfortModel:
         try: return self._airtemp_mapped
         except:
             testpts_shape = self.initmodel.testPts_shape
-            self._airtemp_mapped = np.repeat(self.energymodel.result.air_temperature, repeats= testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
+            self._airtemp_mapped = np.repeat(self.energymodel.result.air_temperature,
+                                             repeats= testpts_shape[1]).reshape(8760, -1).T
             return self._airtemp_mapped
 
     @property
@@ -139,7 +203,7 @@ class ComfortModel:
         except:
             testpts_shape = self.initmodel.testPts_shape
             self._rh_mapped = np.repeat(self.energymodel.result.relative_humidity,
-                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
+                                        repeats=testpts_shape[1]).reshape(8760, -1).T
             return self._rh_mapped
 
     @property
@@ -149,35 +213,47 @@ class ComfortModel:
         except:
             testpts_shape = self.initmodel.testPts_shape
             self._clo_mapped = np.repeat(self.clo,
-                                             repeats=testpts_shape[0] * testpts_shape[1]).reshape(8760, -1).T
+                                             repeats=testpts_shape[1]).reshape(8760, -1).T
             return self._clo_mapped
     @property
     def airspeed_mapped(self): # this is only a temporaty implemeation
         testpts_shape = self.initmodel.testPts_shape
-        airspeed_array = np.empty((testpts_shape[0] * testpts_shape[1], 8760))
+        airspeed_array = np.empty((testpts_shape[1], 8760))
         airspeed_array.fill(0.1)
         return airspeed_array
 
     @property
     def met_mapped(self):
         testpts_shape = self.initmodel.testPts_shape
-        met_array = np.empty((testpts_shape[0] * testpts_shape[1], 8760))
+        met_array = np.empty((testpts_shape[1], 8760))
         met_array.fill(1)
         return met_array
 
     @property
-    def PMVandPPD(self):
+    def firstPMV(self):
         try: return self._PMV, self._PPD, self._heat_loss
         except:
             airtemp = self.airtemp_mapped  #.reshape(-1)
-            mrt = self.totalMRT #.reshape(-1)
+            mrt = self.totalMRT.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], -1).mean(axis  = 0) #.reshape(-1)
             rh = self.rh_mapped #.reshape(-1)
             clo = self.clo_mapped #.reshape(-1)
             airspeed = self.airspeed_mapped #.reshape(-1)
             met = self.met_mapped #.reshape(-1)
+
+            assert airtemp.shape == mrt.shape == rh.shape == clo.shape == airspeed.shape == met.shape
+            origional_array_shape = airtemp.shape
+            # Now flatten the arrays
+            airtemp = airtemp.reshape(-1)
+            mrt = mrt.reshape(-1)
+            rh = rh.reshape(-1)
+            clo = clo.reshape(-1)
+            airspeed = airspeed.reshape(-1)
+            met = met.reshape(-1)
+
+
             logging.info('Calculating PMV and PPD, weeeeee...')
             allarray = np.array([airtemp, mrt, airspeed, rh, met, clo])
-            split_input = np.array_split(allarray, 4,  axis = 2)
+            split_input = np.array_split(allarray, 4, axis = 1) # chop up the list to four pieces
             # start_time = time.time()
             #
             # proc_fanger_calc(*split_input[0])
@@ -210,18 +286,26 @@ class ComfortModel:
             result_list = list(result_list)
             logging.info(time.time()- start_time)
             self._PMV = np.concatenate((result_list[0][0],result_list[1][0],
-                                        result_list[2][0],result_list[3][0]), axis = 1)
-            self._PPD = np.concatenate((result_list[0][1], result_list[1][1],
-                                        result_list[2][1], result_list[3][1]), axis=1)
-            self._heat_loss = np.concatenate((result_list[0][2], result_list[1][2],
-                                              result_list[2][2], result_list[3][2]), axis=1)
-            return self._PMV, self._PPD, self._heat_loss
+                                        result_list[2][0],result_list[3][0])).reshape(*origional_array_shape)
+            # self._PPD = np.concatenate((result_list[0][1], result_list[1][1],
+            #                             result_list[2][1], result_list[3][1])).reshape(*origional_array_shape)
+            self._heat_loss = np.concatenate((result_list[0][1], result_list[1][1],
+                                              result_list[2][1], result_list[3][1])).reshape(*origional_array_shape)
+            return self._PMV, self._heat_loss
             # self.result_2 = result_list
             # p1 = Pool(4)
             # p1.starmap(fanger_pmv, zip(airtemp, mrt, airspeed, rh, met, clo))
             # p1.close()
             # p1.join()
             # logging.info(time.time()- start_time)
+
+    @property
+    def unadjustedPMV(self):
+        try: return self._PMV
+        except:
+            _ = self.firstPMV
+            return self._PMV
+
 
     @property
     def downdraft_speed_and_temperature(self):
@@ -277,9 +361,60 @@ class ComfortModel:
                 return ptVelLists, ptTemplists
 
             final_list = [calcVelTemp_i(inputs[0], inputs[1]) for inputs in zip(airTemp, winsrfsTemp)]
-            self._draft_speed = np.array(final_list)[:,0,:]
-            self._draft_temp = np.array(final_list)[:,1,:]
+            self._draft_speed = np.array(final_list)[:,0,:].T
+            self._draft_temp = np.array(final_list)[:,1,:].T
             return self._draft_speed, self._draft_temp
+
+    @property
+    def draft_speed(self):
+        try: return self._draft_speed
+        except:
+            _ = self.downdraft_speed_and_temperature
+            return self._draft_speed
+    @property
+    def draft_temp(self):
+        try: return self._draft_temp
+        except:
+            _ = self.downdraft_speed_and_temperature
+            return self._draft_temp
+
+    @property
+    def draft_adjusted_PMV(self):
+        try: return self._draft_adjusted_PMV
+        except:
+            assert self.draft_speed.shape == self.draft_temp.shape == self.unadjustedPMV.shape
+            origional_shape = self.unadjustedPMV.shape
+            draft_speed = self.draft_speed.reshape(-1)
+            draft_temp = self.draft_temp.reshape(-1)
+            unadjustedPMV = self.unadjustedPMV.reshape(-1)
+
+
+            start_time = time.time()
+            adjusted = list(map(pmv_draft_adjustment, draft_speed, unadjustedPMV, draft_temp ))
+            logging.info('It takes ' + str(time.time() - start_time) +
+                         ' to calculate the adjusted PMV')
+            self._draft_adjusted_PMV = np.array(adjusted).reshape(*origional_shape)
+            return self._draft_adjusted_PMV
+
+    @property
+    def draft_adjusted_PPD(self):
+        try: return self._draft_adjusted_PPD
+        except:
+            draft_adjusted_PMV = self.draft_adjusted_PMV
+            origional_shape = draft_adjusted_PMV.shape
+            draft_adjusted_PMV = draft_adjusted_PMV.reshape(-1)
+
+            draft_adjusted_PPD = np.array(list(map(ppd_from_pmv, draft_adjusted_PMV))).reshape(*origional_shape)
+            self._draft_adjusted_PPD =draft_adjusted_PPD
+            return self._draft_adjusted_PPD
+
+            # assert self.draft_speed.shape == self.draft_temp.shape == self.unadjustedPMV.shape
+            # self._draft_adjusted_PMV =0
+
+
+
+
+
     @staticmethod
     def calcFloorAirTemp(airTemp, dist, deltaT):
         return airTemp - ((0.3 - (0.034 * dist)) * deltaT)
@@ -293,10 +428,17 @@ class ComfortModel:
     def velMaxFar(deltaT, windowHgt):
         return 0.043 * (math.sqrt(deltaT * windowHgt))
 
+def pmv_draft_adjustment(v, pmv, temp):
+    equation = lambda v, pmv, temp: -0.03686567 * np.sqrt(v) * temp + 0.73404528 * pmv
+    init_result  = equation(v, pmv, temp)
+    if (init_result < pmv) & (v >= 0.1):
+        final_value = init_result  # the adjustment will be accepted if the conditions are satisified
+    else:
+        final_value = pmv   # No adjustment will be taken into account if either of the condition is not datificationed
 
-    @property
-    def downdraft_temperature(self):
-        pass
+    return final_value
+
+
 
 def proc_fanger_calc(i, result_list, *input_array,):
     pmv = np.vectorize(fanger_pmv)
