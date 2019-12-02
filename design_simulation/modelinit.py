@@ -18,6 +18,7 @@ from ladybug_geometry.intersection2d import closest_point2d_on_line2d
 from ladybug_geometry.intersection3d import closest_point3d_on_plane
 import math
 import pandas as pd
+import seaborn as sns
 
 
 import itertools
@@ -536,10 +537,34 @@ class ModelInit(object):
                 {'vf': self.viewfactor[name_of_surface][height_i], 'x': self.testPts_x, 'y': self.testPts_y})
 
             df1 = pd.pivot_table(data=df, values='vf', columns='x', index='y').iloc[::-1]
+            sns.heatmap(df1)
             final_values.append(df1)
 
         return final_values
+    def __manual_verify_fsvv__(self):
+        df = pd.DataFrame(
+            {'fsvv': self.fsvv[0], 'x': self.testPts_x, 'y': self.testPts_y})
 
+        df1 = pd.pivot_table(data=df, values='fsvv', columns='x', index='y').iloc[::-1]
+        sns.heatmap(df1)
+        return df1
+
+    def __manual_verify_angle_facotr__(self):
+        final_results = []
+        for item in self.angle_factors:
+            df = pd.DataFrame(
+                {'angle_factor': item, 'x': self.testPts_x, 'y': self.testPts_y})
+
+            df1 = pd.pivot_table(data=df, values='angle_factor', columns='x', index='y').iloc[::-1]
+            sns.heatmap(df1)
+            final_results.append(df1)
+        return final_results
+
+    def __manual_verify_dist_to_window__(self):
+        df = pd.DataFrame({'dist_to_window': self.dist_to_window, 'x':self.testPts_x, 'y':self.testPts_y})
+        df1 = pd.pivot_table(data=df, values='dist_to_window', columns='x', index='y').iloc[::-1]
+        sns.heatmap(df1)
+        return df1
     def bind_to(self, callback):
         logging.info('BOUND TO OBSERVER')
         self._observers = callback

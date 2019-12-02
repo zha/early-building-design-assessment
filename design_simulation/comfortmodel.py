@@ -73,8 +73,9 @@ class ComfortModel:
         try: return self._LW_MRT
         except:
             vf_array = np.array(list(self.initmodel.viewfactor.values()))
-            vf_array = vf_array.reshape(vf_array.shape[0], -1).T
-            surfacetemps = np.array(list(self.energymodel.result.surfacetemps.values()))
+            assert (vf_array.shape[0] == 8) & (vf_array.shape[1:] == tuple(self.initmodel.testPts_shape))
+            vf_array = vf_array.reshape(vf_array.shape[0], -1).T  # this is to make into shape (#_of_testpts, #_of_walls)
+            surfacetemps = np.array(list(self.energymodel.result.surfacetemps.values())) # shape (#_of_walls, 8760)
             self._LW_MRT = np.matmul(vf_array, (surfacetemps + 273.15) ** 4) ** 0.25 - 273.15
             return self._LW_MRT
 
@@ -354,7 +355,7 @@ class ComfortModel:
     def unadjustedPMV(self):
         try: return self._PMV
         except:
-            _ = self.firstPMV
+            _ = self.firstPMV  # Run the above fcuntion if the above reuslt is not already exits
             return self._PMV
 
 
