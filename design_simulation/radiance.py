@@ -17,6 +17,8 @@ from multiprocessing import Pool
 from multiprocessing import Process,freeze_support
 import multiprocessing
 
+import time
+
 class RadianceModel(object):
     __slots__ = ('_room_rad', '_model', '_result', '_rp')
 
@@ -81,9 +83,9 @@ def matmul(mat1, mat2):
     return np.matmul(mat1, mat2).tolist()
 
 def matop(mtx_dir, dc_dir, mode, return_val):
-    print(mode)
-    print(mtx_dir)
-    print(dc_dir)
+    # print(mode)
+    # print(mtx_dir)
+    # print(dc_dir)
 
     if mode ==1 or mode ==2:
         with open(mtx_dir, 'r') as f:
@@ -101,10 +103,24 @@ def matop(mtx_dir, dc_dir, mode, return_val):
         dc_parsed = dc_parsed.reshape(-1, 146, 3)
         sky_mtx_parsed = sky_mtx_parsed.reshape(146, 4447, 3)
                   # Matrix operation
-        p = Pool(3)
-        final = p.starmap(matmul, zip(dc_parsed.transpose(2, 0, 1), sky_mtx_parsed.transpose(2, 0, 1)))
-        p.close()
-        p.join()
+        # start_time  = time.time()
+        #
+        # p = Pool(3)
+        # final = p.starmap(matmul, zip(dc_parsed.transpose(2, 0, 1), sky_mtx_parsed.transpose(2, 0, 1)))
+        # p.close()
+        # p.join()
+        # print(start_time - time.time())
+
+
+        # start_time = time.time()
+        dc_mtx = dc_parsed.transpose(2, 0, 1)
+        sky_mtx = sky_mtx_parsed.transpose(2, 0, 1)
+        final = []
+        final.append(matmul(dc_mtx[0],sky_mtx[0] ))
+        final.append(matmul(dc_mtx[0], sky_mtx[0]))
+        final.append(matmul(dc_mtx[0], sky_mtx[0]))
+        # print(start_time - time.time())
+
 
 
     elif mode == 3:
@@ -124,10 +140,20 @@ def matop(mtx_dir, dc_dir, mode, return_val):
         p.close()
         p.join()
 
+
+
+
+
+
     final = (np.array(final).transpose(1,2,0) * [47.4, 119.9, 11.6]).sum(axis = 2)
     # final = np.array(final)
+    if return_val is None:
+        pass
+    else:
+        return_val[mode - 1] = final.tolist()
 
-    return_val[mode - 1] = final.tolist()
+
+    # return final
 
     # final = []
     #
@@ -150,19 +176,19 @@ class RadianceResult:
     def total(self):
         try: return self._total
         except:
-            self.results
+            _ = self.results
             return self._total
     @property
     def direct(self):
         try: return self._direct
         except:
-            self.results
+            _ = self.results
             return self._direct
     @property
     def diffuse(self):
         try: return self._diffuse
         except:
-            self.results
+            _  =self.results
             return self._diffuse
 
     @property
@@ -190,6 +216,8 @@ class RadianceResult:
             sun_mtx_dir  =os.path.join(parent_path,'dat', 'sunmtx.npy')
             sun_dc_dir = self._rp.result_files[2]
 
+
+            time_start = time.time()
             manager = multiprocessing.Manager()
             result_list = manager.list([None, None, None])
             p1 = Process(target=matop, args=(total_mtx_dir, total_dc_dir, 1,result_list))
@@ -204,6 +232,19 @@ class RadianceResult:
             p1.join()
             p2.join()
             p3.join()
+            print(time.time()-time_start)
+
+
+            # time_start = time.time()
+            # p = Pool()
+            # p.starmap(matop, zip([total_mtx_dir,direct_mtx_dir,sun_mtx_dir],
+            #                              [total_dc_dir,direct_dc_dir,sun_dc_dir],
+            #                              [1,2,3], [None, None, None]))
+            # p.close()
+            # p.join()
+            # print(time.time()-time_start)
+
+
             # pool = Pool(processes=3)
             #
             # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]

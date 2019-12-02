@@ -17,6 +17,7 @@ from ladybug_geometry.geometry3d.line import LineSegment3D
 from ladybug_geometry.intersection2d import closest_point2d_on_line2d
 from ladybug_geometry.intersection3d import closest_point3d_on_plane
 import math
+import pandas as pd
 
 
 import itertools
@@ -30,7 +31,7 @@ class ModelInit(object):
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
                  '_sun_up_altitude','testPts_shape', '_angle_factors', '_dist_to_window',
-                 '_testPts2D',
+                 '_testPts2D', '_fsvv',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
@@ -251,7 +252,12 @@ class ModelInit(object):
         except:
             self._testPts2D = np.array(self.testPts[0])[:,:-1]
             return self._testPts2D
-
+    @property
+    def testPts_x(self):
+        return self.testPts2D[:,0]
+    @property
+    def testPts_y(self):
+        return self.testPts2D[:, 1]
 
     @property
     def weather(self):
@@ -277,11 +283,21 @@ class ModelInit(object):
     def sun_up_altitude(self):
         try: return self._sun_up_altitude
         except:
-            self.sun_up_hoys
+            _ = self.sun_up_hoys
             return self._sun_up_altitude
 
 
+    @property
+    def dist_to_window(self):
+        return self._dist_to_window
 
+    @property
+    def fsvv(self):
+        try: return self._fsvv
+        except:
+            dist_to_window_all_pts = np.array([self.dist_to_window[0]] * self.testPts_shape[0])
+            self._fsvv = np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) * np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) / 90 / 180
+            return self._fsvv
 
     def __genRoom(self,numGlz = 2,):
 
@@ -512,6 +528,17 @@ class ModelInit(object):
             distance_to_glazing.append(ind_srf_dist)
         return anglefactors, distance_to_glazing
 
+    def __manual_verify_view_factor__(self, name_of_surface):  # This method is used to verify view factor information
+        assert name_of_surface in self.viewfactor.keys(), self.viewfactor.keys()
+        final_values = []
+        for height_i in range(3):
+            df = pd.DataFrame(
+                {'vf': self.viewfactor[name_of_surface][height_i], 'x': self.testPts_x, 'y': self.testPts_y})
+
+            df1 = pd.pivot_table(data=df, values='vf', columns='x', index='y').iloc[::-1]
+            final_values.append(df1)
+
+        return final_values
 
     def bind_to(self, callback):
         logging.info('BOUND TO OBSERVER')

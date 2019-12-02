@@ -1,5 +1,5 @@
 import numpy as np
-from ladybug_comfort.solarcal import body_solar_flux_from_horiz_parts,erf_from_body_solar_flux,mrt_delta_from_erf
+from ladybug_comfort.solarcal import body_solar_flux_from_horiz_parts,erf_from_body_solar_flux,mrt_delta_from_erf,indoor_sky_heat_exch,body_solar_flux_from_parts
 from multiprocessing import Pool
 import time
 import logging
@@ -81,6 +81,7 @@ class ComfortModel:
 
 
 
+
     def pd_mapped_2D(self, var_name, hour_i = None, month = None, day = None, hod = None, height_i = 0):  # height should be index
         if hour_i is not None:
             assert hour_i in range(8760)
@@ -148,29 +149,71 @@ class ComfortModel:
             origional_dims = direct.shape
             diffuse = np.array(self.radiancemodel.result.diffuse)
             sun_up_altitude = np.repeat(self.initmodel.sun_up_altitude, repeats=direct.shape[0]).reshape(-1, direct.shape[0]).T
+            assert sun_up_altitude.shape == direct.shape == diffuse.shape
             direct = direct.reshape(-1).tolist()
             diffuse = diffuse.reshape(-1).tolist()
             sun_up_altitude = sun_up_altitude.reshape(-1).tolist()
+            assert self.initmodel.fsvv.shape == tuple(self.initmodel.testPts_shape)
+            fsvv = np.array([self.initmodel.fsvv.reshape(-1).tolist()]*len(self.initmodel.sun_up_hoys)).T
+            assert fsvv.shape == np.array(self.radiancemodel.result.diffuse).shape == np.array(self.radiancemodel.result.direct).shape
+            fsvv = fsvv.reshape(-1).tolist()
 
+            # start_time = time.time()
+            #
+            # p1 = Pool(4)
+            # bodyrad = p1.starmap(body_solar_flux_from_horiz_parts, zip(diffuse, direct, sun_up_altitude))
+            # p1.close()
+            #
+            # p2 = Pool(4)
+            # erf = p2.map(erf_from_body_solar_flux, list(bodyrad))
+            # p2.close()
+            #
+            # p3 = Pool(4)
+            # dmrt = p3.map(mrt_delta_from_erf, list(erf))
+            # p3.close()
+            #
+            #
+            # p1.join()
+            # p2.join()
+            # p3.join()
+            # logging.info('it takes' + str(time.time() - start_time)+ 'to calucate dMRT')
+            #
+            # # method 2
+            # start_time = time.time()
+            # bodyrad = list(map(body_solar_flux_from_horiz_parts, diffuse, direct, sun_up_altitude))
+            # erf = list(map(erf_from_body_solar_flux, bodyrad))
+            # dmrt = list(map(mrt_delta_from_erf, erf))
+            # logging.info(time.time()- start_time)
+            # method 3
             start_time = time.time()
+            bodyrad = [body_solar_flux_from_parts(diff_horiz_solar = diffuse, dir_normal_solar = direct,
+                                            altitude = sun_up_altitude,sky_exposure = sky_exposure,
+                                            )
+                       for diffuse, direct, sun_up_altitude,sky_exposure in zip( diffuse, direct, sun_up_altitude, fsvv)]
+            erf = list(map(erf_from_body_solar_flux, bodyrad))
+            dmrt = list(map(mrt_delta_from_erf, erf))
+            logging.info(time.time()- start_time)
+            # method 4
+            # split_input = np.array_split([diffuse, direct, sun_up_altitude], 4, axis =1)
+            # start_time = time.time()
+            # manager = multiprocessing.Manager()
+            # result_list = manager.list([None, None, None, None])
+            # p1 = Process(target=calc_dmrt, args=(0, result_list, *split_input[0]))
+            # p2 = Process(target=calc_dmrt, args=(1, result_list, *split_input[1]))
+            # p3 = Process(target=calc_dmrt, args=(2, result_list, *split_input[2]))
+            # p4 = Process(target=calc_dmrt, args=(3, result_list, *split_input[3]))
+            # p1.start()
+            # p2.start()
+            # p3.start()
+            # p4.start()
+            #
+            # p1.join()
+            # p2.join()
+            # p3.join()
+            # p4.join()
+            # result_list = list(result_list)
+            # logging.info(time.time()- start_time)
 
-            p1 = Pool(4)
-            bodyrad = p1.starmap(body_solar_flux_from_horiz_parts, zip(diffuse, direct, sun_up_altitude))
-            p1.close()
-            p1.join()
-
-            p2 = Pool(4)
-            erf = p2.map(erf_from_body_solar_flux, list(bodyrad))
-            p2.close()
-            p2.join()
-
-            p3 = Pool(4)
-            dmrt = p3.map(mrt_delta_from_erf, list(erf))
-            p3.close()
-            p3.join()
-
-
-            logging.info(time.time() - start_time)
             delta_mrt_sun_up_hoys = np.array(list(dmrt)).reshape(*origional_dims)
             sun_up_hoys = np.array(self.initmodel.sun_up_hoys).astype(int).tolist()
             dmrt8760 = np.empty((delta_mrt_sun_up_hoys.shape[0], 8760))
@@ -187,6 +230,14 @@ class ComfortModel:
             orimrt = self.LW_MRT
             self._totalMRT = orimrt + dmrt
             return self._totalMRT
+
+    # @property
+    # def fsvv_mapped(self):
+    #     np.array([self.initmodel.fsvv.tolist()] * 8760).transpose()
+    #     return
+
+
+
 
     @property
     def airtemp_mapped(self):
@@ -231,7 +282,7 @@ class ComfortModel:
 
     @property
     def firstPMV(self):
-        try: return self._PMV, self._PPD, self._heat_loss
+        try: return self._PMV,  self._heat_loss
         except:
             airtemp = self.airtemp_mapped  #.reshape(-1)
             mrt = self.totalMRT.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], -1).mean(axis  = 0) #.reshape(-1)
@@ -444,7 +495,11 @@ def proc_fanger_calc(i, result_list, *input_array,):
     pmv = np.vectorize(fanger_pmv)
     result_list[i] = pmv(*input_array)
 
-
+def calc_dmrt(i, result_list, *input_array):
+    bodyrad = [body_solar_flux_from_horiz_parts(*item) for item in zip(*input_array)]
+    erf = [erf_from_body_solar_flux(item) for item in bodyrad]
+    dmrt = [mrt_delta_from_erf(item) for item in erf]
+    result_list[i] = dmrt
     # def runall(self):
     #     p1 = Process(target=get_energy_and_radiance_at_the_same_time, args=(self.energymodel, self.initmodel))
     #     p2 = Process(target=get_energy_and_radiance_at_the_same_time, args=(self.radiancemodel, self.initmodel))
