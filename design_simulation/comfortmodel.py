@@ -411,11 +411,56 @@ class ComfortModel:
                 ptVelLists = np.amax(ptVelLists, axis = 0)
                 ptTemplists = np.amin(ptTemplists, axis=0)
                 return ptVelLists, ptTemplists
+            start_time = time.time()
 
             final_list = [calcVelTemp_i(inputs[0], inputs[1]) for inputs in zip(airTemp, winsrfsTemp)]
             self._draft_speed = np.array(final_list)[:,0,:].T
             self._draft_temp = np.array(final_list)[:,1,:].T
+
+            print(time.time() - start_time)
             return self._draft_speed, self._draft_temp
+
+
+    def __manual_validate_downdraft_speed_and_temperature__(self):
+        assert len(self.initmodel.glazing_faces_geometry) == 2, 'currrently it only works for 2 glazing surface'
+        spreadFac = .97  # spatial
+        windowHgt = self.initmodel.glzheight  # spatial
+        start_time  = time.time()
+        airtemp = np.array([np.squeeze(self.energymodel.result.air_temperature).tolist()] * self.initmodel.testPts_shape[1])
+        winsrfsTemp = np.array([[srftemp] * self.initmodel.testPts_shape[1] for srftemp in list(self.energymodel.result.glztemps.values())])
+        dists = np.moveaxis([self.initmodel.distance_to_window] * 8760, 0, -1)  # shape = (#_of_glz, #_of_testpts, 8760)
+        angFacs = np.moveaxis([self.initmodel.angle_factors] * 8760, 0, -1)
+        print(time.time() - start_time)
+
+        def calcVelTemp(airtemp_i, srftemp_i, dist_i, angfac_i):
+            glassAirDelta = airtemp_i - srftemp_i
+            if glassAirDelta > 0:
+                if dist_i < 0.4:
+                    windSpd = self.velMaxClose(glassAirDelta, windowHgt)
+                elif dist_i < 2:
+                    windSpd = self.velMaxMid(dist_i, glassAirDelta, windowHgt)
+                else:
+                    windSpd = self.velMaxFar(glassAirDelta, windowHgt)
+                floorAirTemp = self.calcFloorAirTemp(airtemp_i, dist_i, glassAirDelta)
+                vel = windSpd * ((angfac_i / (1 / spreadFac)) + (1 - spreadFac))
+                temp = airtemp_i - ((airtemp_i - floorAirTemp) * ((angfac_i / (1 / spreadFac)) + (1 - spreadFac)))
+                return vel, temp
+            else:
+                return 0, airtemp_i
+        results_all = []
+        for glz_i in range(2):
+            results_all.append( list(map(calcVelTemp, airtemp.reshape(-1), winsrfsTemp[glz_i].reshape(-1), dists[glz_i].reshape(-1),
+                               angFacs[glz_i].reshape(-1)))  )
+        # results_all should have shape of (#_of_glz, totla, 2 (parameters))
+        max_vel = np.array(results_all)[:,:,0].max(axis = 0 )
+        min_temp = np.array(results_all)[:,:,1].min(axis = 0 )
+        max_vel = max_vel.reshape(-1, 8760)
+        min_temp = min_temp.reshape(-1,8760)
+
+        assert (max_vel == self.downdraft_speed_and_temperature[0]).all()
+        assert (min_temp == self.downdraft_speed_and_temperature[1]).all()
+        return True
+
 
     @property
     def draft_speed(self):
