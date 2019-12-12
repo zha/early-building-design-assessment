@@ -1,4 +1,4 @@
-from .utils import *
+# from .utils import *
 import warnings
 import logging
 from ladybug_geometry.geometry3d.pointvector import Point3D, Vector3D
@@ -24,6 +24,11 @@ import seaborn as sns
 import itertools
 
 import numpy as np
+from pathlib import Path
+import os
+
+
+
 # TODO: for update method, add assert to make sure that all the inputs are in
 class ModelInit(object):
     __slots__ = ('_zone_name','_orientation', '_zone_width', '_zone_depth', '_zone_height',
@@ -428,8 +433,14 @@ class ModelInit(object):
 
     @staticmethod
     def __calcVF(testPts, faces):  # Calculate viewfactor,,, testPts must be numpy array of LB Point3D objects
-        dome_vec = gen_dome()
-        vecs = [Vector3D(*single_vector) for single_vector in dome_vec.T]
+        # dome_vec = gen_dome()
+        # vecs = [Vector3D(*single_vector) for single_vector in dome_vec.T]
+        parent_path = Path(__file__).parent
+        vec_path = os.path.join(parent_path, 'dat', 'ray_values.csv')
+        vecs_array = np.genfromtxt(vec_path, delimiter=',')
+        vecs = [Vector3D(*single_vector) for single_vector in vecs_array.T]
+
+
 
         def calcVF_ind(faces, testPt):  # VF for individual point
 

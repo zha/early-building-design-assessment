@@ -159,7 +159,15 @@ class EnergyModel:
             sim_par.output.add_output("Zone People Sensible Heating Energy")
 
             # Get the input design days
-            ddy_file = 'e:/CAN_ON_Toronto.716240_CWEC.ddy'
+            # ddy_file = 'e:/CAN_ON_Toronto.716240_CWEC.ddy'
+
+            wea_dir = self.model.wea_dir
+
+            wea_dirname = os.path.dirname(wea_dir)
+            wea_filename = os.path.splitext(os.path.basename(wea_dir))[0]
+
+            ddy_file = os.path.join(wea_dirname, wea_filename + '.ddy')
+
             ddy_obj = DDY.from_ddy_file(ddy_file)
             ddy_strs = [ddy.ep_style_string for ddy in ddy_obj.design_days if
                         '99.6%' in ddy.name or '.4%' in ddy.name]
