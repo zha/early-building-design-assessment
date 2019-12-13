@@ -28,7 +28,6 @@ from pathlib import Path
 import os
 
 
-
 # TODO: for update method, add assert to make sure that all the inputs are in
 class ModelInit(object):
     __slots__ = ('_zone_name','_orientation', '_zone_width', '_zone_depth', '_zone_height',
