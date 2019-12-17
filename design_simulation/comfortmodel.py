@@ -96,7 +96,8 @@ class ComfortModel:
     def pd_mapped_2D(self, var_name, hour_i=None, month=None, day=None, hod=None, height_i=0):  # height should be index
         """
         args:
-            var_name : the name of the variable that need to be mapped. Supported types:
+            var_name : the name of the variable that need to be mapped. Curretnly supported
+                        Supported types:
         """
         if hour_i is not None:
             assert hour_i in range(8760)
@@ -117,7 +118,7 @@ class ComfortModel:
         elif origional_data_shape[0] == self.initmodel.testPts_shape[1]:  ## This data only contain the 2d test points
             mapped_data = self.__generate_pivot_table_2D(xy, origional_data[:, hoy])
         else:
-            raise Exception("Something wrong with the mapped data")
+            raise Exception("Shape of the input . Need to debug the code manually")
 
         return mapped_data
 
@@ -161,7 +162,6 @@ class ComfortModel:
             numpy array with shape (# of test points * # of heights, 8760)
 
         """
-        # return type
         try:
             return self._delta_mrt
         except:
@@ -249,6 +249,11 @@ class ComfortModel:
 
     @property
     def totalMRT(self):  # This is for all test points and for all heights
+        """
+        return:
+            numpy array with shape (# of test points * # of heights, 8760)
+
+        """
         try:
             return self._totalMRT
         except:
@@ -264,6 +269,11 @@ class ComfortModel:
 
     @property
     def airtemp_mapped(self):
+        """
+        return:
+            numpy array with shape (# number of test pts with one height, 8760)
+
+        """
         try:
             return self._airtemp_mapped
         except:
@@ -329,7 +339,7 @@ class ComfortModel:
 
     @property
     def firstPMV(self):
-        """NO NEED TO RUN DIRECTLY,  RUN unadjustedPMV INSTEAD"""
+        """NO NEED TO RUN DIRECTLY,  RUN unadjustedPMV right below INSTEAD"""
 
         try:
             return self._PMV, self._heat_loss
@@ -401,6 +411,11 @@ class ComfortModel:
 
     @property
     def unadjustedPMV(self):
+        """
+        return:
+            numpy array with shape (# of test points; one height, 8760)
+
+        """
         try:
             return self._PMV
         except:
@@ -409,6 +424,11 @@ class ComfortModel:
 
     @property
     def downdraft_speed_and_temperature(self):
+        """
+        return:
+            draft_speed: numpy array with shape (# of test points; one height, 8760)
+            draft_temperature: (# of test points; one height, 8760)
+        """
         try:
             return self._draft_speed, self._draft_temp
         except:
@@ -516,6 +536,11 @@ class ComfortModel:
 
     @property
     def draft_speed(self):
+        """
+        return:
+            numpy array with shape of (# of test points; one height, 8760)
+
+        """
         try:
             return self._draft_speed
         except:
@@ -524,6 +549,11 @@ class ComfortModel:
 
     @property
     def draft_temp(self):
+        """
+        return:
+            numpy array with shape of (# of test points; one height, 8760)
+
+        """
         try:
             return self._draft_temp
         except:
@@ -532,6 +562,11 @@ class ComfortModel:
 
     @property
     def draft_adjusted_PMV(self):
+        """
+         return:
+             numpy array with shape of (# of test points; one height, 8760)
+
+         """
         try:
             return self._draft_adjusted_PMV
         except:
@@ -550,6 +585,11 @@ class ComfortModel:
 
     @property
     def draft_adjusted_PPD(self):
+        """
+         return:
+             numpy array with shape of (# of test points; one height, 8760)
+
+         """
         try:
             return self._draft_adjusted_PPD
         except:
