@@ -133,6 +133,10 @@ class ComfortModel:
 
     @property
     def direct_all_hoys(self):
+        """
+        return:
+
+        """
         try:
             return self._direct_all_hoys
         except:
@@ -145,6 +149,11 @@ class ComfortModel:
 
     @property
     def diffuse_all_hoys(self):
+        """
+        return:
+            
+
+        """
         try:
             return self._diffuse_all_hoys
         except:
