@@ -154,6 +154,8 @@ class EnergyModel:
 
             sim_par.output.add_output('System Node Temperature')
             sim_par.output.add_output("Zone Ideal Loads Supply Air Sensible Heating Energy")
+            sim_par.output.add_output("Zone Ideal Loads Supply Air Sensible Cooling Energy")
+
             sim_par.output.add_output("Zone Infiltration Sensible Heat Loss Energy")
             sim_par.output.add_output("Zone Infiltration Sensible Heat Gain Energy")
             sim_par.output.add_output("Zone People Sensible Heating Energy")

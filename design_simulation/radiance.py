@@ -78,9 +78,14 @@ class RadianceModel(object):
             self._result = RadianceResult(project_folder, self.rp)
             return self._result
 import os
-def matmul(mat1, mat2):
+def matmul(mat1, mat2, i = None, result_list = None):
     print(os.getpid())
-    return np.matmul(mat1, mat2).tolist()
+    result = np.matmul(mat1, mat2).tolist()
+    if (i is not None ) & (result_list is not None):
+        result_list[i] = result
+    else:
+        pass
+    return result
 
 def matop(mtx_dir, dc_dir, mode, return_val):
     # print(mode)
@@ -115,10 +120,11 @@ def matop(mtx_dir, dc_dir, mode, return_val):
         # start_time = time.time()
         dc_mtx = dc_parsed.transpose(2, 0, 1)
         sky_mtx = sky_mtx_parsed.transpose(2, 0, 1)
+        print(dc_mtx.shape)
         final = []
-        final.append(matmul(dc_mtx[0],sky_mtx[0] ))
-        final.append(matmul(dc_mtx[0], sky_mtx[0]))
-        final.append(matmul(dc_mtx[0], sky_mtx[0]))
+        final.append(matmul(dc_mtx[0], sky_mtx[0] ))
+        final.append(matmul(dc_mtx[1], sky_mtx[1]))
+        final.append(matmul(dc_mtx[2], sky_mtx[2]))
         # print(start_time - time.time())
 
 
@@ -135,10 +141,32 @@ def matop(mtx_dir, dc_dir, mode, return_val):
 
         sun_mtx = np.array([np.diag(sun_mtx[:, i]) for i in range(3)])
 
-        p = Pool()
-        final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
-        p.close()
-        p.join()
+        dc_mtx = dc_sun_parsed.transpose(2, 0, 1)
+
+        # final = []
+        # final.append(matmul(dc_mtx[0], sun_mtx[0]))
+        # final.append(matmul(dc_mtx[1], sun_mtx[1]))
+        # final.append(matmul(dc_mtx[2], sun_mtx[2]))
+
+        manager = multiprocessing.Manager()
+        result_list = manager.list([None, None, None])
+        p1 = Process(target=matmul, args=(dc_mtx[0], sun_mtx[0],0, result_list))
+        p2 = Process(target=matmul, args=(dc_mtx[1], sun_mtx[1], 1, result_list))
+        p3 = Process(target=matmul, args=(dc_mtx[2], sun_mtx[2], 2, result_list))
+
+        p1.start()
+        p2.start()
+        p3.start()
+
+        p1.join()
+        p2.join()
+        p3.join()
+
+        final = list(result_list)
+        # p = Pool()
+        # final = p.starmap(matmul, zip(dc_sun_parsed.transpose(2, 0, 1), sun_mtx))
+        # p.close()
+        # p.join()
 
 
 
@@ -195,7 +223,7 @@ class RadianceResult:
     def results(self):
         try: return self._results
         except:
-            logging.info("Now calcualte the final Radiance result")
+            logging.info("Now calculate the final Radiance result")
             # scene_total = self.scene_daylit
             # scene_direct = self.scene_black_daylit
             # scene_sun = self.scene_sun

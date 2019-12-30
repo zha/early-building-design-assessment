@@ -36,11 +36,11 @@ class ModelInit(object):
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
                  '_sun_up_altitude','testPts_shape', '_angle_factors', '_dist_to_window',
-                 '_testPts2D', '_fsvv',
+                 '_testPts2D', '_fsvv','_LSG',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
-                 zone_height = None,  U_factor = None, SHGC = None, WWR = None,
+                 zone_height = None,  U_factor = None, SHGC = None, WWR = None, LSG = None,
                  stand = True, wea_dir = None, working_dir = None):
         self.zone_name = zone_name
         self.orientation = orientation
@@ -49,6 +49,7 @@ class ModelInit(object):
         self.zone_height = zone_height
         self.U_factor = U_factor
         self.SHGC = SHGC
+        self.LSG = LSG
         self.WWR = WWR
         self.stand = stand
         self.wea_dir = wea_dir
@@ -138,6 +139,16 @@ class ModelInit(object):
     @SHGC.setter
     def SHGC(self, value):
         self._SHGC = value
+
+    @property
+    def LSG(self):
+        return self._LSG
+    @LSG.setter
+    def LSG(self,value):
+        if value is None:
+            self._LSG = 1.2  # reference:https://www.sciencedirect.com/science/article/pii/S0038092X08003460
+        else:
+            self._LSG = value
 
     @property
     def stand(self):
@@ -253,10 +264,8 @@ class ModelInit(object):
         return self._testPts
     @property
     def testPts2D(self):
-        try: return self._testPts2D
-        except:
-            self._testPts2D = np.array(self.testPts[0])[:,:-1]
-            return self._testPts2D
+        self._testPts2D = np.array(self.testPts[0])[:,:-1]
+        return self._testPts2D
     @property
     def testPts_x(self):
         return self.testPts2D[:,0]
@@ -298,11 +307,9 @@ class ModelInit(object):
 
     @property
     def fsvv(self):
-        try: return self._fsvv
-        except:
-            dist_to_window_all_pts = np.array([self.dist_to_window[0]] * self.testPts_shape[0])
-            self._fsvv = np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) * np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) / 90 / 180
-            return self._fsvv
+        dist_to_window_all_pts = np.array([self.dist_to_window[0]] * self.testPts_shape[0])
+        self._fsvv = np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) * np.degrees(np.arctan(2 / (2 * dist_to_window_all_pts))) / 90 / 180
+        return self._fsvv
 
     def __genRoom(self,numGlz = 2,):
 

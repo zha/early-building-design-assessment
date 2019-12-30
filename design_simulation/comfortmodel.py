@@ -96,14 +96,16 @@ class ComfortModel:
     def pd_mapped_2D(self, var_name, hour_i=None, month=None, day=None, hod=None, height_i=0):  # height should be index
         """
         args:
-            var_name : the name of the variable that need to be mapped. Curretnly supported
-                        Supported types:
+            var_name : the name of the variable that need to be mapped. Currently supported values:
+                    - delta_MRT
+                    - direct_all_hoys
+                    - diffuse_all_hoys
         """
         if hour_i is not None:
             assert hour_i in range(8760)
             hoy = hour_i
         elif all([month is not None, day is not None, hod is not None]):
-            assert (month in range(12)) and (day in range(31)) and (hod in range(24))
+            assert (month in range(1,13)) and (day in range(1, 32)) and (hod in range(24))
             hoy = DateTime(month=month, day=day, hour=hod).int_hoy
         else:
             raise Exception("Something inputs to this function is not right. Check your inputs ")
@@ -118,9 +120,9 @@ class ComfortModel:
         elif origional_data_shape[0] == self.initmodel.testPts_shape[1]:  ## This data only contain the 2d test points
             mapped_data = self.__generate_pivot_table_2D(xy, origional_data[:, hoy])
         else:
-            raise Exception("Shape of the input . Need to debug the code manually")
+            raise Exception("Shape of the input is not recognized. Need to debug the code manually")
 
-        return mapped_data
+        return mapped_data.iloc[::-1]
 
         # reshaped = self.LW_MRT.reshape(3,-1, 8760)
         # partialfunc = partial(self.generate_pivot_table_2D, self.initmodel.testPts2D.T)
@@ -135,7 +137,7 @@ class ComfortModel:
     def direct_all_hoys(self):
         """
         return:
-
+            numpy array with shape (# of test points for all heights, 8760)
         """
         try:
             return self._direct_all_hoys
@@ -151,7 +153,7 @@ class ComfortModel:
     def diffuse_all_hoys(self):
         """
         return:
-            
+            numpy array with shape
 
         """
         try:
@@ -168,7 +170,7 @@ class ComfortModel:
     def delta_MRT(self):
         """
         return:
-            numpy array with shape (# of test points * # of heights, 8760)
+            numpy array with shape (# of test points for all heights;, 8760)
 
         """
         try:
