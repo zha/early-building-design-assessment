@@ -267,6 +267,42 @@ class EnergyResult:
 
             #             assert len(np.where(index)) == 1
             #             self.__dict__[key] = self._df[self._df.columns[index]]
+    @property
+    def supply_air_sensible_heating(self):
+        try: return self._supply_air_sensible_heating
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Ideal Loads Supply Air Sensible Heating Energy'.lower())
+            assert len(np.where(index)) == 1
+            self._supply_air_sensible_heating = self.df[self._df.columns[index]].values.tolist()
+            return self._supply_air_sensible_heating
+
+    @property
+    def supply_air_total_heating(self):
+        try: return self._supply_air_total_heating
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Ideal Loads Supply Air Total Heating Energy'.lower())
+            assert len(np.where(index)) == 1
+            self._supply_air_total_heating = self.df[self._df.columns[index]].values.tolist()
+            return self._supply_air_total_heating
+
+
+    @property
+    def supply_air_sensible_cooling(self):
+        try: return self._supply_air_sensible_cooling
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Ideal Loads Supply Air Sensible Cooling Energy'.lower())
+            assert len(np.where(index)) == 1
+            self._supply_air_sensible_cooling = self.df[self._df.columns[index]].values.tolist()
+            return self._supply_air_sensible_cooling
+
+    @property
+    def supply_air_total_cooling(self):
+        try: return self._supply_air_total_cooling
+        except:
+            index = self.df.columns.str.lower().str.contains('Zone Ideal Loads Supply Air Total Cooling Energy'.lower())
+            assert len(np.where(index)) == 1
+            self._supply_air_total_cooling = self.df[self._df.columns[index]].values.tolist()
+            return self._supply_air_total_cooling
 
 
     # def __getattr__(self, item):

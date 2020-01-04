@@ -19,6 +19,9 @@ from ladybug_geometry.intersection3d import closest_point3d_on_plane
 import math
 import pandas as pd
 import seaborn as sns
+from window_overall import WinProp
+from pathlib import Path
+
 
 
 import itertools
@@ -36,11 +39,11 @@ class ModelInit(object):
                  '_exterior_wall_face', '_floor_face', '_ceiling_face','__faceid_reversed',
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
                  '_sun_up_altitude','testPts_shape', '_angle_factors', '_dist_to_window',
-                 '_testPts2D', '_fsvv','_LSG',
+                 '_testPts2D', '_fsvv','_Tsol','_window_obj', '_sunpath',
                  '_working_dir', '_observers','__xupper', '__yupper', )
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
-                 zone_height = None,  U_factor = None, SHGC = None, WWR = None, LSG = None,
+                 zone_height = None,  U_factor = None, SHGC = None, WWR = None, Tsol = None,
                  stand = True, wea_dir = None, working_dir = None):
         self.zone_name = zone_name
         self.orientation = orientation
@@ -49,7 +52,7 @@ class ModelInit(object):
         self.zone_height = zone_height
         self.U_factor = U_factor
         self.SHGC = SHGC
-        self.LSG = LSG
+        self.Tsol = Tsol
         self.WWR = WWR
         self.stand = stand
         self.wea_dir = wea_dir
@@ -57,6 +60,8 @@ class ModelInit(object):
         self._weather = None
         self._observers = None
         self._sun_up_hoys = None
+        self._window_obj = None
+        self._sunpath = None
         self.__faceid = {0: "floor", 1: "north", 2: "east", 3: "south", 4: "west", 5: "ceiling"}
         self.__faceid_reversed = {v: k for k, v in self.__faceid.items()}
         self.__faceid_rad = {0: "south", 1: "east", 2:"north", 3:"west"}  # TODO: ADD ASSERT TO CHECK RADAINCE
@@ -124,9 +129,25 @@ class ModelInit(object):
     def wea_dir(self,value):
         self._wea_dir = value
 
+
+    @property
+    def window_obj(self):
+        if self._window_obj is None:
+            parent_path = Path(__file__).parent
+            out_layer_optical_dir = os.path.join(parent_path, 'dat', 'CLEAR_6.DAT')
+            in_layer_optical_dir = os.path.join(parent_path, 'dat', 'CLEAR_6.DAT')
+            self._window_obj = WinProp(self.zone_width / 2 * (self.WWR / 100) ** 0.5, self.zone_height * (self.WWR / 100) ** 0.5, out_layer_optical_dir, in_layer_optical_dir, 'AIR')
+            return self._window_obj
+        else:
+            return self._window_obj
+
     @property
     def U_factor(self):
-        return self._U_factor
+        if self._U_factor is None:
+            self._U_factor = self.window_obj.overallU
+            return self._U_factor
+        else:
+            return self._U_factor
 
     @U_factor.setter
     def U_factor(self, value):
@@ -134,21 +155,29 @@ class ModelInit(object):
 
     @property
     def SHGC(self):
-        return self._SHGC
+        if self._SHGC is None:
+            self._SHGC = self.window_obj.overallSHGC
+            return self._SHGC
+        else:
+            return self._SHGC
 
     @SHGC.setter
     def SHGC(self, value):
         self._SHGC = value
 
     @property
-    def LSG(self):
-        return self._LSG
-    @LSG.setter
-    def LSG(self,value):
-        if value is None:
-            self._LSG = 1.2  # reference:https://www.sciencedirect.com/science/article/pii/S0038092X08003460
+    def Tsol(self):
+        if self._Tsol is None:
+            self._Tsol =  0.085775 * self.SHGC ** 2 + 0.963954 * self.SHGC - 0.084958  # https://drive.google.com/file/d/18qB5SOPydXGK-vM45Qg5BtoXkQSndERR/view
+            return self._Tsol
         else:
-            self._LSG = value
+            return self._Tsol
+    @Tsol.setter
+    def Tsol(self,value):
+        # if value is None: # Use default calculated value if no value is specified
+        #     # self._Tsol = 1.2  # reference:https://www.sciencedirect.com/science/article/pii/S0038092X08003460
+        # else:
+        self._Tsol = value
 
     @property
     def stand(self):
@@ -283,7 +312,12 @@ class ModelInit(object):
         return self.weather.location
     @property
     def sunpath(self):
-        return Sunpath.from_location(self.location)
+        if self._sunpath is None:
+            self._sunpath = Sunpath.from_location(self.location)
+            return self._sunpath
+        else:
+            return self._sunpath
+        # return Sunpath.from_location(self.location)
     @property
     def sun_up_hoys(self):
         if self._sun_up_hoys is None:

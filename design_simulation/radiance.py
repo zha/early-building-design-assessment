@@ -39,7 +39,7 @@ class RadianceModel(object):
 
         # add in window properties before returing
 
-        glass_mat = Glass.by_single_trans_value('GLASS_MAT_WITH_SHGC_{}'.format(self.model.SHGC), self.model.SHGC)  # todo: this assumption nedds to be checked
+        glass_mat = Glass.by_single_trans_value('GLASS_MAT_WITH_TSOL_{}'.format(self.model.Tsol), self.model.Tsol)
 
 
         for glz_face in self.model.room_rad.walls[self.model._ModelInit__faceid_rad_reversed[self.model.orientation]].children_surfaces:
