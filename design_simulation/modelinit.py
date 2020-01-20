@@ -507,11 +507,11 @@ class ModelInit(object):
     @staticmethod
     def __gentestpts(x_lower, x_upper, y_lower, y_upper, z_height, x_size, y_size):
         # This function alwasy return list
-        n_x = round((x_upper - x_lower) / x_size)
+        n_x = int(round((x_upper - x_lower) / x_size))
         x = np.linspace(x_lower, x_upper, n_x + 1)
         x_testpts = x[:-1] + np.diff(x) / 2
 
-        n_y = round((y_upper - y_lower) / y_size)
+        n_y = int(round((y_upper - y_lower) / y_size))
         y = np.linspace(y_lower, y_upper, n_y + 1)
         y_testpts = y[:-1] + np.diff(y) / 2
         xy = list(itertools.product(x_testpts, y_testpts))

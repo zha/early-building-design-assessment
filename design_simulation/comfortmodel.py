@@ -12,7 +12,7 @@ from ladybug_comfort.pmv import fanger_pmv
 import multiprocessing
 import math
 from ladybug_comfort.pmv import ppd_from_pmv
-# from ladybug.dt import DateTime
+from ladybug.dt import DateTime
 from functools import partial
 
 
@@ -93,41 +93,43 @@ class ComfortModel:
             self._LW_MRT = np.matmul(vf_array, (surfacetemps + 273.15) ** 4) ** 0.25 - 273.15
             return self._LW_MRT
 
-    # def pd_mapped_2D(self, var_name, hour_i=None, month=None, day=None, hod=None, height_i=0):  # height should be index
-    #     """
-    #     args:
-    #         var_name : the name of the variable that need to be mapped. Currently supported values:
-    #                 - delta_MRT
-    #                 - direct_all_hoys
-    #                 - diffuse_all_hoys
-    #     """
-    #     if hour_i is not None:
-    #         assert hour_i in range(8760)
-    #         hoy = hour_i
-    #     elif all([month is not None, day is not None, hod is not None]):
-    #         assert (month in range(1,13)) and (day in range(1, 32)) and (hod in range(24))
-    #         hoy = DateTime(month=month, day=day, hour=hod, minute= 0).int_hoy
-    #     else:
-    #         raise Exception("Something inputs to this function is not right. Check your inputs ")
-    #
-    #     xy = self.initmodel.testPts2D.T
-    #     origional_data = self.__getattribute__(var_name)
-    #     origional_data_shape = origional_data.shape
-    #     if origional_data_shape[0] == self.initmodel.testPts_shape[0] * self.initmodel.testPts_shape[
-    #         1]:  ##  Then this data contains all testpoints
-    #         reshaped = origional_data.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], 8760)
-    #         mapped_data = self.__generate_pivot_table_2D(xy, reshaped[height_i, :, hoy])
-    #     elif origional_data_shape[0] == self.initmodel.testPts_shape[1]:  ## This data only contain the 2d test points
-    #         mapped_data = self.__generate_pivot_table_2D(xy, origional_data[:, hoy])
-    #     else:
-    #         raise Exception("Shape of the input is not recognized. Need to debug the code manually")
-    #
-    #     return mapped_data.iloc[::-1]
-    #
-    #     # reshaped = self.LW_MRT.reshape(3,-1, 8760)
-    #     # partialfunc = partial(self.generate_pivot_table_2D, self.initmodel.testPts2D.T)
-    #     # return np.apply_along_axis(partialfunc, axis = 1 , arr= reshaped)
-    #
+    def pd_mapped_2D(self, var_name, hour_i=None, month=None, day=None, hod=None, height_i=0):  # height should be index
+        """
+        args:
+            var_name : the name of the variable that need to be mapped. Currently supported values:
+                    - delta_MRT
+                    - direct_all_hoys
+                    - diffuse_all_hoys
+        """
+        if hour_i is not None:
+            assert hour_i in range(8760)
+            hoy = hour_i
+
+        elif all([month is not None, day is not None, hod is not None]):
+            assert (month in range(1,13)) and (day in range(1, 32)) and (hod in range(24))
+            hoy = DateTime(month=month, day=day, hour=hod, minute= 0).int_hoy
+            print("Give input, the HOY is {}".format(hoy))
+        else:
+            raise Exception("Something inputs to this function is not right. Check your inputs ")
+
+        xy = self.initmodel.testPts2D.T
+        origional_data = self.__getattribute__(var_name)
+        origional_data_shape = origional_data.shape
+        if origional_data_shape[0] == self.initmodel.testPts_shape[0] * self.initmodel.testPts_shape[
+            1]:  ##  Then this data contains all testpoints
+            reshaped = origional_data.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], 8760)
+            mapped_data = self.__generate_pivot_table_2D(xy, reshaped[height_i, :, hoy])
+        elif origional_data_shape[0] == self.initmodel.testPts_shape[1]:  ## This data only contain the 2d test points
+            mapped_data = self.__generate_pivot_table_2D(xy, origional_data[:, hoy])
+        else:
+            raise Exception("Shape of the input is not recognized. Need to debug the code manually")
+
+        return mapped_data.iloc[::-1]
+
+        # reshaped = self.LW_MRT.reshape(3,-1, 8760)
+        # partialfunc = partial(self.generate_pivot_table_2D, self.initmodel.testPts2D.T)
+        # return np.apply_along_axis(partialfunc, axis = 1 , arr= reshaped)
+
 
     @staticmethod
     def __generate_pivot_table_2D(xy, data):
