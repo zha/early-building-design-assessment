@@ -149,6 +149,12 @@ class Post:
         }
         df = pd.DataFrame(df_dict)
         df['Season & solar'] = df['Season'] + ', ' + df['Solar Condition']
+
+        ## Transform DP into 0-100
+
+        df['$DP_{\mathrm{warm}}$'] = df['$DP_{\mathrm{warm}}$'] * 100
+        df['$DP_{\mathrm{cold}}$'] = df['$DP_{\mathrm{cold}}$'] * 100
+
         return df
 
 
@@ -175,7 +181,48 @@ class Post:
         pass
 
 
+# Below are for showing intermediate results.... They can be used for debuging purpose
+    @property
+    def zerothDP(self):  # This is the DP with nothing considered
+
+        return ((self._obj.zerothPMV > 0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)).mean() * 100, ((self._obj.zerothPMV < -0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)).mean() * 100
 
 
+    @property
+    def firstDP(self):   # This is the DP with solar radiation incorporated
+
+        return ((self._obj.unadjustedPMV > 0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)).mean() * 100, ((self._obj.unadjustedPMV < -0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)).mean() * 100
+
+    @property
+    def zerothDP8760(self):
+        return ((self._obj.zerothPMV > 0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)) * 100, ((self._obj.zerothPMV < -0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)) * 100
 
 
+    @property
+    def firstDP8760(self):
+        return ((self._obj.unadjustedPMV > 0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)) * 100, ((self._obj.unadjustedPMV < -0.5).sum(axis=0) / len(self._obj.initmodel.testPts2D)) * 100
+
+
+    @property
+    def finalDP(self):
+
+        return self.percentagewarm.mean() * 100, self.percentagecold.mean() * 100
+
+    @property
+    def zerothTS(self):
+        warm_8760  = np.array([self._obj.zerothPPD[:,hour_i][self._obj.zerothPMV[:,hour_i] > 0.5].mean() for hour_i in range(8760)])
+        cold_8760  = np.array([self._obj.zerothPPD[:,hour_i][self._obj.zerothPMV[:,hour_i] < -0.5].mean() for hour_i in range(8760)])
+        return warm_8760, cold_8760
+
+    @property
+    def firstTS(self):
+        warm_8760  = np.array([self._obj.firstPPD[:,hour_i][self._obj.unadjustedPMV[:,hour_i] > 0.5].mean() for hour_i in range(8760)])
+        cold_8760  = np.array([self._obj.firstPPD[:,hour_i][self._obj.unadjustedPMV[:,hour_i] < -0.5].mean() for hour_i in range(8760)])
+        return warm_8760, cold_8760
+
+
+    @property
+    def finalTS(self):
+        warm_8760 = np.array([self._obj.draft_adjusted_PPD[:,hour_i][self._obj.draft_adjusted_PMV[:,hour_i] > 0.5].mean() for hour_i in range(8760)])
+        cold_8760 = np.array([self._obj.draft_adjusted_PPD[:,hour_i][self._obj.draft_adjusted_PMV[:,hour_i] < -0.5].mean() for hour_i in range(8760)])
+        return warm_8760, cold_8760

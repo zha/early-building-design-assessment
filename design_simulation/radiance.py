@@ -75,7 +75,7 @@ class RadianceModel(object):
             logging.info('Now running Radiance')
             self.rp.run(batch_file, debug=False)
             logging.info('Radiance is now completed')
-            self._result = RadianceResult(project_folder, self.rp)
+            self._result = RadianceResult(project_folder, self.rp, len(self.model.sun_up_hoys), self.model.sun_mtx)
             return self._result
 import os
 def matmul(mat1, mat2, i = None, result_list = None):
@@ -87,7 +87,7 @@ def matmul(mat1, mat2, i = None, result_list = None):
         pass
     return result
 
-def matop(mtx_dir, dc_dir, mode, return_val):
+def matop(mtx_dir, dc_dir, mode, return_val,sun_up_hours):
     # print(mode)
     # print(mtx_dir)
     # print(dc_dir)
@@ -106,7 +106,11 @@ def matop(mtx_dir, dc_dir, mode, return_val):
         dc_parsed = np.fromstring(dc_str, sep=" ")
         sky_mtx_parsed = np.fromstring(sky_mtx_str, sep=" ")
         dc_parsed = dc_parsed.reshape(-1, 146, 3)
-        sky_mtx_parsed = sky_mtx_parsed.reshape(146, 4447, 3)
+        # sky_mtx_parsed = sky_mtx_parsed.reshape(146, 4447, 3)
+
+        sky_mtx_parsed = sky_mtx_parsed.reshape(146, sun_up_hours, 3)
+
+
                   # Matrix operation
         # start_time  = time.time()
         #
@@ -137,11 +141,16 @@ def matop(mtx_dir, dc_dir, mode, return_val):
 
         dc_sun_str = ' '.join(dc_sun[10:]).replace("\t", " ").replace("\n", " ")
         dc_sun_parsed = np.fromstring(dc_sun_str, sep=" ")
-        dc_sun_parsed = dc_sun_parsed.reshape(-1, 4447, 3)
+        # dc_sun_parsed = dc_sun_parsed.reshape(-1, 4447, 3)
+        dc_sun_parsed = dc_sun_parsed.reshape(-1, sun_up_hours, 3)
+
 
         sun_mtx = np.array([np.diag(sun_mtx[:, i]) for i in range(3)])
 
         dc_mtx = dc_sun_parsed.transpose(2, 0, 1)
+
+        print(dc_mtx.shape)
+        print(sun_mtx.shape)
 
         # final = []
         # final.append(matmul(dc_mtx[0], sun_mtx[0]))
@@ -195,10 +204,13 @@ def matop(mtx_dir, dc_dir, mode, return_val):
 
 class RadianceResult:
     __slots__ = ('_rp', '_project_dir', '_scene_daylit','_scene_black_daylit', '_results',
-                 '_scene_sun', '_total', '_direct', '_diffuse')
-    def __init__(self, project_dir, rp):
+                 '_scene_sun', '_total', '_direct', '_diffuse', '_sun_up_hoy', '_sun_mtx')
+    def __init__(self, project_dir, rp,sun_up_hoy, sun_mtx):
         self._project_dir = project_dir
         self._rp = rp
+        self._sun_up_hoy = sun_up_hoy
+        self._sun_mtx = sun_mtx
+
 
     @property
     def total(self):
@@ -240,17 +252,18 @@ class RadianceResult:
             direct_mtx_dir = os.path.join(self._project_dir, self._rp._skyfiles.sky_mtx_direct)
             direct_dc_dir =self._rp.result_files[1]
 
-            parent_path = Path(__file__).parent
-            sun_mtx_dir  =os.path.join(parent_path,'dat', 'sunmtx.npy')
+            # parent_path = Path(__file__).parent
+            # sun_mtx_dir  =os.path.join(parent_path,'dat', 'sunmtx.npy')
+            sun_mtx_dir = self._sun_mtx[0]
             sun_dc_dir = self._rp.result_files[2]
 
 
             time_start = time.time()
             manager = multiprocessing.Manager()
             result_list = manager.list([None, None, None])
-            p1 = Process(target=matop, args=(total_mtx_dir, total_dc_dir, 1,result_list))
-            p2 = Process(target=matop, args=(direct_mtx_dir, direct_dc_dir, 2,result_list))
-            p3 = Process(target=matop, args=(sun_mtx_dir, sun_dc_dir, 3, result_list))
+            p1 = Process(target=matop, args=(total_mtx_dir, total_dc_dir, 1,result_list, self._sun_up_hoy))
+            p2 = Process(target=matop, args=(direct_mtx_dir, direct_dc_dir, 2,result_list,self._sun_up_hoy))
+            p3 = Process(target=matop, args=(sun_mtx_dir, sun_dc_dir, 3, result_list,self._sun_up_hoy))
 
 
             p1.start()

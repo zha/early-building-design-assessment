@@ -121,6 +121,8 @@ class EnergyModel:
             self.room.properties.energy.electric_equipment = equip
 
             self.room.properties.energy.hvac = IdealAirSystem(heating_limit=6096, cooling_limit=4570,
+                                                         cooling_supply_air_limit = 0.188,
+                                                         heating_supply_air_limit = 0.188,
                                                          economizer_type="NoEconomizer",
                                                          heating_availability_schedule=htg_avail[0],
                                                          cooling_availability_schedule=clg_avail[0])

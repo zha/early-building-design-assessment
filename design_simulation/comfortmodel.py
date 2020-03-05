@@ -437,6 +437,120 @@ class ComfortModel:
             return self._PMV
 
     @property
+    def firstPPD(self):  # The PPD value correspond to the solar-adjusted PMV (first PMV)
+        try:
+            return self._firstPPD
+        except:
+            firstPMV = self.unadjustedPMV
+            origional_shape = firstPMV.shape
+            firstPMV = firstPMV.reshape(-1)
+
+            firstPPD = np.array(list(map(ppd_from_pmv, firstPMV))).reshape(*origional_shape)
+            self._firstPPD = firstPPD
+            return self._firstPPD
+
+    @property
+    def zerothPMV(self):
+        """
+        This is the very origional PMV, calculated only using only the infrared MRT
+        :return:
+        """
+        try:
+            return self._zerothPMV
+        except:
+            airtemp = self.airtemp_mapped  # .reshape(-1)
+            mrt = self.LW_MRT.reshape(self.initmodel.testPts_shape[0], self.initmodel.testPts_shape[1], -1).mean(
+                axis=0)  # .reshape(-1)
+            rh = self.rh_mapped  # .reshape(-1)
+            clo = self.clo_mapped  # .reshape(-1)
+            airspeed = self.airspeed_mapped  # .reshape(-1)
+            met = self.met_mapped  # .reshape(-1)
+
+            assert airtemp.shape == mrt.shape == rh.shape == clo.shape == airspeed.shape == met.shape
+            origional_array_shape = airtemp.shape
+            # Now flatten the arrays
+            airtemp = airtemp.reshape(-1)
+            mrt = mrt.reshape(-1)
+            rh = rh.reshape(-1)
+            clo = clo.reshape(-1)
+            airspeed = airspeed.reshape(-1)
+            met = met.reshape(-1)
+
+            logging.info('Calculating ZEROTH PMV and PPD, weeeeee...')
+            allarray = np.array([airtemp, mrt, airspeed, rh, met, clo])
+            split_input = np.array_split(allarray, 4, axis=1)  # chop up the list to four pieces
+            # start_time = time.time()
+            #
+            # proc_fanger_calc(*split_input[0])
+            # proc_fanger_calc(*split_input[1])
+            # proc_fanger_calc(*split_input[2])
+            # proc_fanger_calc(*split_input[3])
+            # logging.info(time.time()- start_time)
+            # start_time = time.time()
+            # pmv = np.vectorize(fanger_pmv)
+            # self.result_1 = pmv(*allarray)
+            # logging.info(time.time() - start_time)
+
+            start_time = time.time()
+            manager = multiprocessing.Manager()
+            result_list = manager.list([None, None, None, None])
+            p1 = Process(target=proc_fanger_calc, args=(0, result_list, *split_input[0]))
+            p2 = Process(target=proc_fanger_calc, args=(1, result_list, *split_input[1]))
+            p3 = Process(target=proc_fanger_calc, args=(2, result_list, *split_input[2]))
+            p4 = Process(target=proc_fanger_calc, args=(3, result_list, *split_input[3]))
+            p1.start()
+            p2.start()
+            p3.start()
+            p4.start()
+
+            p1.join()
+            p2.join()
+            p3.join()
+            p4.join()
+            result_list = list(result_list)
+            logging.info(time.time() - start_time)
+            self._zerothPMV = np.concatenate((result_list[0][0], result_list[1][0],
+                                        result_list[2][0], result_list[3][0])).reshape(*origional_array_shape)
+            # self._PPD = np.concatenate((result_list[0][1], result_list[1][1],
+            #                             result_list[2][1], result_list[3][1])).reshape(*origional_array_shape)
+            self._zeroth_heat_loss = np.concatenate((result_list[0][1], result_list[1][1],
+                                              result_list[2][1], result_list[3][1])).reshape(*origional_array_shape)
+            return self._zerothPMV
+
+    @property
+    def adjusted_only_for_draft_PMV(self):
+        try:
+            return self._adjusted_only_for_draft_PMV
+        except:
+            zerothPMV = self.zerothPMV
+            assert self.draft_speed.shape == self.draft_temp.shape == self.zerothPMV.shape
+            origional_shape = self.zerothPMV.shape
+            draft_speed = self.draft_speed.reshape(-1)
+            draft_temp = self.draft_temp.reshape(-1)
+            zerothPMV = self.zerothPMV.reshape(-1)
+
+            start_time = time.time()
+            adjusted = list(map(pmv_draft_adjustment, draft_speed, zerothPMV, draft_temp))
+            logging.info('It takes ' + str(time.time() - start_time) +
+                         ' to calculate the adjusted PMV')
+            self._adjusted_only_for_draft_PMV = np.array(adjusted).reshape(*origional_shape)
+            return self._adjusted_only_for_draft_PMV
+
+
+    @property
+    def zerothPPD(self):
+        try:
+            return self._zerothPPD
+        except:
+            zerothPMV = self.zerothPMV
+            origional_shape = zerothPMV.shape
+            zerothPMV = zerothPMV.reshape(-1)
+
+            zerothPPD = np.array(list(map(ppd_from_pmv, zerothPMV))).reshape(*origional_shape)
+            self._zerothPPD = zerothPPD
+            return self._zerothPPD
+
+    @property
     def downdraft_speed_and_temperature(self):
         """
         return:
@@ -636,7 +750,9 @@ class ComfortModel:
 
 
 def pmv_draft_adjustment(v, pmv, temp):
-    equation = lambda v, pmv, temp: -0.03686567 * np.sqrt(v) * temp + 0.73404528 * pmv
+    # equation = lambda v, pmv, temp: -0.03686567 * np.sqrt(v) * temp + 0.73404528 * pmv
+    equation = lambda v, pmv, temp: -0.055290 * np.sqrt(v) * (33 - temp) +  0.730789 * pmv
+
     init_result = equation(v, pmv, temp)
     if (init_result < pmv) & (v >= 0.1):
         final_value = init_result  # the adjustment will be accepted if the conditions are satisified

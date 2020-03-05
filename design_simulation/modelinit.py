@@ -21,8 +21,9 @@ import pandas as pd
 import seaborn as sns
 from window_overall import WinProp
 from pathlib import Path
+from honeybeeradiance.radiance.sky.sunmatrix import SunMatrix
 
-
+from ladybug.dt import DateTime
 
 import itertools
 
@@ -40,7 +41,7 @@ class ModelInit(object):
                  '__faceid_rad_reversed', '__faceid_rad','_room_rad','_weather', '_sun_up_hoys',
                  '_sun_up_altitude','testPts_shape', '_angle_factors', '_dist_to_window',
                  '_testPts2D', '_fsvv','_Tsol','_window_obj', '_sunpath',
-                 '_working_dir', '_observers','__xupper', '__yupper', )
+                 '_working_dir', '_observers','__xupper', '__yupper', '_sun_mtx_dir')
 
     def __init__(self, zone_name = None, orientation = None,zone_width = None, zone_depth = None,
                  zone_height = None,  U_factor = None, SHGC = None, WWR = None, Tsol = None,
@@ -321,12 +322,60 @@ class ModelInit(object):
     @property
     def sun_up_hoys(self):
         if self._sun_up_hoys is None:
-            suns = tuple(self.sunpath.calculate_sun_from_hoy(hoy) for hoy in range(8760))
-            result_list = [[s.hoy, s.altitude] for s in suns if s.altitude > 0]
-            self._sun_up_hoys = np.array(result_list).T[0].tolist()
-            self._sun_up_altitude = np.array(result_list).T[1].tolist()
+            month_date_time = (DateTime.from_hoy(idx, False) for idx in range(8760))
+            sun_up_hours = []
+            sun_up_altitude = []
+            for timecount, dt in enumerate(month_date_time):
+                month, day, hour = dt.month, dt.day, dt.float_hour
+                sun = self.sunpath.calculate_sun(month, day, hour)
+                if sun.altitude < 0:
+                    continue
+                else:
+                    sun_up_hours.append(dt.hoy)
+                    sun_up_altitude.append(sun.altitude)
+            # suns = tuple(self.sunpath.calculate_sun_from_hoy(hoy) for hoy in range(8760))
+            # result_list = [[s.hoy, s.altitude] for s in suns if not s.altitude < 0]
+
+
+            # self._sun_up_hoys = np.array(result_list).T[0].tolist()
+            # self._sun_up_altitude = np.array(result_list).T[1].tolist()
+            self._sun_up_hoys = sun_up_hours
+            self._sun_up_altitude = sun_up_altitude
+
+
 
         return self._sun_up_hoys
+
+
+
+
+    @property
+    def sun_mtx(self):
+        country = self.location.country
+        state = self.location.state
+        city = self.location.city
+        Latitude = self.location.latitude
+        Longitude = self.location.longitude
+        file_path = Path(self.working_dir, country +'_'+ state + '_' + city +'_'+ str(Latitude) +'_'+ str(Longitude) + '.sunmtx')
+        self._sun_mtx_dir  = file_path
+        try:
+            with open(file_path, 'rb') as f:
+                return (file_path, np.load(f))
+        except:
+            obj = SunMatrix.from_wea(self.weather, hoys=range(8760), output_type=1)
+            sunmtx_list = [obj.solar_values] * 3
+            sunmtx_arr = np.moveaxis(np.array(sunmtx_list), 1, 0)
+
+
+
+
+            with open(file_path, 'wb') as f:
+                sunmtx_arr.dump(f)
+            return (file_path, sunmtx_arr)
+
+
+
+
     @property
     def sun_up_altitude(self):
         try: return self._sun_up_altitude
