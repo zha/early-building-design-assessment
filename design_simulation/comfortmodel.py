@@ -527,7 +527,7 @@ class ComfortModel:
             origional_shape = self.zerothPMV.shape
             draft_speed = self.draft_speed.reshape(-1)
             draft_temp = self.draft_temp.reshape(-1)
-            zerothPMV = self.zerothPMV.reshape(-1)
+            zerothPMV = zerothPMV.reshape(-1)
 
             start_time = time.time()
             adjusted = list(map(pmv_draft_adjustment, draft_speed, zerothPMV, draft_temp))

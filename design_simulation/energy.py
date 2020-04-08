@@ -23,6 +23,8 @@ from honeybee.model import Model
 from honeybee_energy.boundarycondition import Adiabatic
 from honeybee.boundarycondition import Outdoors
 from honeybee_energy.run import run_idf
+from honeybee_energy.schedule.csvschedule import CSVSchedule
+
 import os
 import logging
 from pathlib import Path
@@ -84,31 +86,44 @@ class EnergyModel:
 
             parent_path = Path(__file__).parent
 
-            occ_sch_dir = os.path.join(parent_path, 'dat', 'occ.idf')
-            occ_sch = ScheduleRuleset.extract_all_from_idf_file(occ_sch_dir)
+            # occ_sch_dir = os.path.join(parent_path, 'dat', 'occ.idf')
+            # occ_sch = ScheduleRuleset.extract_all_from_idf_file(occ_sch_dir)
 
-            act_sch_dir = os.path.join(parent_path, 'dat', 'act.idf')
-            act_sch = ScheduleRuleset.extract_all_from_idf_file(act_sch_dir)
+            occ_sch =  CSVSchedule('occ_sch', r"F:\Google Drive\temp\file_schedule_construction\occ.csv", schedule_types.fractional)
 
-            ltg_sch_dir = os.path.join(parent_path, 'dat', 'ltg.idf')
-            ltg_sch = ScheduleRuleset.extract_all_from_idf_file(ltg_sch_dir)
+            # act_sch_dir = os.path.join(parent_path, 'dat', 'act.idf')
+            # act_sch = ScheduleRuleset.extract_all_from_idf_file(act_sch_dir)
 
-            eqp_sch_dir = os.path.join(parent_path, 'dat', 'eqp.idf')
-            eqp_sch = ScheduleRuleset.extract_all_from_idf_file(eqp_sch_dir)
+            act_sch = CSVSchedule('act_sch', r"F:\Google Drive\temp\file_schedule_construction\act.csv", schedule_types.activity_level)
 
-            clg_avail_dir = os.path.join(parent_path, 'dat', 'CLG_availiability.idf')
-            clg_avail = ScheduleRuleset.extract_all_from_idf_file(clg_avail_dir)
 
-            htg_avail_dir = os.path.join(parent_path, 'dat', 'HTG_availiability.idf')
-            htg_avail = ScheduleRuleset.extract_all_from_idf_file(htg_avail_dir)
+            ltg_sch = CSVSchedule('ltg_sch', r"F:\Google Drive\temp\file_schedule_construction\ltg.csv", schedule_types.fractional)
+            # ltg_sch_dir = os.path.join(parent_path, 'dat', 'ltg.idf')
+            # ltg_sch = ScheduleRuleset.extract_all_from_idf_file(ltg_sch_dir)
+
+            eqp_sch = CSVSchedule('eqp_sch', r"F:\Google Drive\temp\file_schedule_construction\eqp.csv", schedule_types.fractional)
+
+            # eqp_sch_dir = os.path.join(parent_path, 'dat', 'eqp.idf')
+            # eqp_sch = ScheduleRuleset.extract_all_from_idf_file(eqp_sch_dir)
+
+
+
+            # clg_avail_dir = os.path.join(parent_path, 'dat', 'CLG_availiability.idf')
+            # clg_avail = ScheduleRuleset.extract_all_from_idf_file(clg_avail_dir)
+            #
+            # htg_avail_dir = os.path.join(parent_path, 'dat', 'HTG_availiability.idf')
+            # htg_avail = ScheduleRuleset.extract_all_from_idf_file(htg_avail_dir)
+
+
+            clg_avail = CSVSchedule('clg_avail', r"F:\Google Drive\temp\file_schedule_construction\cooling.csv", schedule_types.on_off)
+            htg_avail = CSVSchedule('htg_avail', r"F:\Google Drive\temp\file_schedule_construction\heating.csv", schedule_types.on_off)
 
             always_on = ScheduleRuleset.from_constant_value('Always on', 1, schedule_type_limit=schedule_types.on_off)
 
-            people = People('People Obj', 0.04, occ_sch[0], activity_schedule=act_sch[
-                0])  # name, people_per_area, occupancy_schedule, activity_schedule=None, radiant_fraction=0.3, latent_fraction='autocalculate'
+            people = People('People Obj', 0.04, occ_sch, activity_schedule=act_sch)  # name, people_per_area, occupancy_schedule, activity_schedule=None, radiant_fraction=0.3, latent_fraction='autocalculate'
             self.room.properties.energy.people = people
 
-            lighting = Lighting('Lighting Obj', 5, ltg_sch[0])
+            lighting = Lighting('Lighting Obj', 5, ltg_sch)
             self.room.properties.energy.lighting = lighting
 
             infiltration = Infiltration('Infiltration obj', 0.00025, always_on)
@@ -117,22 +132,33 @@ class EnergyModel:
             ventilation = Ventilation('Ventilation obj', 0, 0.000729166, 0, 0, always_on)
             self.room.properties.energy.ventilation = ventilation
 
-            equip = ElectricEquipment('Equipment obj', 5, eqp_sch[0], radiant_fraction=0.6)
+            equip = ElectricEquipment('Equipment obj', 5, eqp_sch, radiant_fraction=0.6)
             self.room.properties.energy.electric_equipment = equip
 
             self.room.properties.energy.hvac = IdealAirSystem(heating_limit=6096, cooling_limit=4570,
                                                          cooling_supply_air_limit = 0.188,
                                                          heating_supply_air_limit = 0.188,
                                                          economizer_type="NoEconomizer",
-                                                         heating_availability_schedule=htg_avail[0],
-                                                         cooling_availability_schedule=clg_avail[0])
+                                                         heating_availability_schedule=htg_avail,
+                                                         cooling_availability_schedule=clg_avail)
 
-            heat_setpt = ScheduleRuleset.from_constant_value(
-                'Heat_stp', 22, schedule_types.temperature)
-            cool_setpt = ScheduleRuleset.from_constant_value(
-                'Cool_stp', 24, schedule_types.temperature)
+            # heat_setpt = ScheduleRuleset.from_constant_value(
+            #     'Heat_stp', 22, schedule_types.temperature)
+            # cool_setpt = ScheduleRuleset.from_constant_value(
+            #     'Cool_stp', 24, schedule_types.temperature)
+
+
+
+            cool_setpt = CSVSchedule('Cool_stp', r"F:\Google Drive\temp\file_schedule_construction\cool_setpt.csv", schedule_types.temperature)
+            heat_setpt = CSVSchedule('Heat_stp', r"F:\Google Drive\temp\file_schedule_construction\heat_setpt.csv", schedule_types.temperature)
+
+
+            # humidifying_schedule =  CSVSchedule('Humidity_sch', r"F:\Google Drive\temp\file_schedule_construction\humidity.csv", schedule_types.percent)
+
 
             setpoint = Setpoint('Setpoints', heat_setpt, cool_setpt)
+
+            # setpoint.humidifying_setpoint = 30
 
             self.room.properties.energy.setpoint = setpoint
 

@@ -521,6 +521,18 @@ class ModelInit(object):
             logging.info("No updates are needed")
 
     @staticmethod
+    def gen_occupant_csv():
+        occupancy = [0.9] * 6 + [0.7] + [0.4] + [0.3] * 8 + [0.5] + [0.9] * 7
+        occupancy_wk = [0.9] * 6 + [0.7] + [0.5] * 9 + [0.7] + [0.9] * 7
+        occ_year = [occupancy_wk if Date.from_doy(i + 1).weekday() in [5, 6] else occupancy for i in range(365)]
+        np.savetxt("z:/occ.csv", [val for sublist in occ_year for val in sublist], delimiter=',')
+
+    @staticmethod
+    def gen_ltg_csv():
+        pass
+
+
+    @staticmethod
     def __calcVF(testPts, faces):  # Calculate viewfactor,,, testPts must be numpy array of LB Point3D objects
         # dome_vec = gen_dome()
         # vecs = [Vector3D(*single_vector) for single_vector in dome_vec.T]

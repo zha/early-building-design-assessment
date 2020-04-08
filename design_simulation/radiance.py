@@ -137,7 +137,7 @@ def matop(mtx_dir, dc_dir, mode, return_val,sun_up_hours):
         with open(dc_dir, 'r') as f:
             dc_sun = f.readlines()
         with open(mtx_dir, 'rb') as f:
-            sun_mtx = np.load(f)
+            sun_mtx = np.load(f, allow_pickle= True)
 
         dc_sun_str = ' '.join(dc_sun[10:]).replace("\t", " ").replace("\n", " ")
         dc_sun_parsed = np.fromstring(dc_sun_str, sep=" ")
@@ -276,6 +276,12 @@ class RadianceResult:
             print(time.time()-time_start)
 
 
+            # result_list = [None, None, None]
+            # matop(total_mtx_dir, total_dc_dir, 1,result_list, self._sun_up_hoy)
+            # matop(direct_mtx_dir, direct_dc_dir, 2,result_list,self._sun_up_hoy)
+            # matop(sun_mtx_dir, sun_dc_dir, 3, result_list,self._sun_up_hoy)
+
+
             # time_start = time.time()
             # p = Pool()
             # p.starmap(matop, zip([total_mtx_dir,direct_mtx_dir,sun_mtx_dir],
@@ -289,6 +295,8 @@ class RadianceResult:
             # pool = Pool(processes=3)
             #
             # [pool.apply_async(testone, args=(x,)) for x in [self.scene_daylit, self.scene_black_daylit]]
+
+            # np.save("z:/sdfsdfs.npy", np.array(result_list), allow_pickle =True)
             result_list = (np.array(result_list) / 179 ).tolist()
             diffuse = np.array(result_list[0]) - np.array(result_list[1])
             diffuse[diffuse < 0] = 0
