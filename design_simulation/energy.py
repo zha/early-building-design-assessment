@@ -17,7 +17,7 @@ from honeybee_energy.material.opaque import EnergyMaterial
 from honeybee_energy.material.glazing import EnergyWindowMaterialSimpleGlazSys
 from honeybee_energy.idealair import IdealAirSystem
 from honeybee_energy.schedule.ruleset import ScheduleRuleset
-from ladybug.designday import DDY
+from ladybug.ddy import DDY
 from ladybug.futil import write_to_file_by_name
 from honeybee.model import Model
 from honeybee_energy.boundarycondition import Adiabatic
