@@ -290,7 +290,7 @@ def _get_commands_daylight_coeff(
                 sun_commands = sun_coeff_matrix_commands(
                     sun_matrix, os.path.relpath(points_file, project_folder),
                     rad_files_blacked, os.path.relpath(analemma, project_folder),
-                    sunlist, rfluxmtx_parameters.irradiance_calc
+                    sunlist, rfluxmtx_parameters.irradiance_calc, project_folder
                 )
 
                 commands.extend(cmd.to_rad_string() for cmd in sun_commands)

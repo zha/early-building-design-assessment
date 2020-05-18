@@ -199,7 +199,7 @@ class EnergyModel:
             ddy_file = os.path.join(wea_dirname, wea_filename + '.ddy')
 
             ddy_obj = DDY.from_ddy_file(ddy_file)
-            ddy_strs = [ddy.ep_style_string for ddy in ddy_obj.design_days if
+            ddy_strs = [ddy.to_idf() for ddy in ddy_obj.design_days if
                         '99.6%' in ddy.name or '.4%' in ddy.name]
 
             sim_par_str = sim_par.to_idf()
@@ -229,7 +229,7 @@ class EnergyModel:
         except:
             logging.info("No pre-exisitng result found, now running EP")
             write_to_file_by_name(os.path.join(self.model.working_dir, self.model.zone_name), 'in.idf', self.idf, True)
-            run_idf(os.path.join(self.model.working_dir, self.model.zone_name, 'in.idf'), self.model.wea_dir, r"C:\EnergyPlusV9-0-1")
+            run_idf(os.path.join(self.model.working_dir, self.model.zone_name, ), self.model.wea_dir)
 
             self._result = EnergyResult(os.path.join(self.model.working_dir, self.model.zone_name, 'eplusout.csv'), self.model)
 

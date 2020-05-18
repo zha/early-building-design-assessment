@@ -70,9 +70,12 @@ class ComfortModel:
         try:
             return self.initmodel.clo
         except:
-            clo = (self.season_array == 2) * 0.5 + \
-                  (self.season_array == 1) * 1.0 + \
-                  (self.season_array == 0) * 0.75
+            # clo = (self.season_array == 2) * 0.5 + \
+            #       (self.season_array == 1) * 1.0 + \
+            #       (self.season_array == 0) * 0.75
+            clo = (self.season_array == 2) * 0.3 + \
+                  (self.season_array == 1) * 0.7 + \
+                  (self.season_array == 0) * 0.5
             return clo
 
     @property
