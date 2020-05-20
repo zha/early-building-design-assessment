@@ -141,7 +141,6 @@ class EnergyModel:
                                                          economizer_type="NoEconomizer",
                                                          heating_availability_schedule=htg_avail,
                                                          cooling_availability_schedule=clg_avail)
-
             # heat_setpt = ScheduleRuleset.from_constant_value(
             #     'Heat_stp', 22, schedule_types.temperature)
             # cool_setpt = ScheduleRuleset.from_constant_value(
@@ -156,11 +155,13 @@ class EnergyModel:
             # humidifying_schedule =  CSVSchedule('Humidity_sch', r"F:\Google Drive\temp\file_schedule_construction\humidity.csv", schedule_types.percent)
 
 
-            setpoint = Setpoint('Setpoints', heat_setpt, cool_setpt)
+            setpoint = Setpoint('Setpoints', heat_setpt, cool_setpt,)
 
-            # setpoint.humidifying_setpoint = 30
+            # setpoint.humidifying_setpoint = 'none'
 
             self.room.properties.energy.setpoint = setpoint
+
+            # self.room.properties.energy.setpoint.humidifying_setpoint = 'none'
 
             model = Model(self.model.zone_name + 'model', [self.room])
 
